@@ -1,5 +1,6 @@
 # Script 3: Create log-bins for all variables.
 
+# Modified on 20 February 2020: For ratios, use minimum number of individuals across the 2 groups being compared, rather than total
 # Modified on 13 January 2020: Use imputed production (1 segment) to create total production bins -- note this must now be run AFTER models are all fit.
 # Modified on 13 January 2020: For individual production, diameter growth, and production per area, remove the recruits.
 # Modified on 06 November 2019: prioritize single year binning, separating multiple year binning elsewhere
@@ -248,7 +249,7 @@ breeder_stats_bydiam <- tibble(fg_a_prod = totalprodbin_byyear_bydiam[[2]],
                year = year,
                breeder_production_ratio = fg_a_prod$bin_value / fg_b_prod$bin_value,
                breeder_density_ratio = fg_a_dens$bin_value / fg_b_dens$bin_value,
-               n_individuals = fg_a_dens$bin_count + fg_b_dens$bin_count)) %>%
+               n_individuals = pmin(fg_a_dens$bin_count, fg_b_dens$bin_count))) %>%
   bind_rows %>%
   mutate_if(is.double, ~ if_else(is.finite(.x), .x, as.numeric(NA)))
 
@@ -261,7 +262,7 @@ breeder_stats_bydiam_2census <- breeder_stats_bydiam %>%
             production_ratio_max = max(breeder_production_ratio),
             density_ratio_min = min(breeder_density_ratio),
             density_ratio_max = max(breeder_density_ratio),
-            mean_n_individuals = mean(n_individuals)) %>%
+            mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 breeder_stats_bydiam_byyear <- breeder_stats_bydiam %>%
@@ -280,7 +281,7 @@ breeder_stats_bydiam_5census <- breeder_stats_bydiam %>%
             production_ratio_max = max(breeder_production_ratio),
             density_ratio_min = min(breeder_density_ratio),
             density_ratio_max = max(breeder_density_ratio),
-            mean_n_individuals = mean(n_individuals)) %>%
+            mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 
@@ -295,7 +296,7 @@ breeder_stats_bylight <- tibble(fg_a_prod = totalprodbin_byyear_bylight[[2]],
                year = year,
                breeder_production_ratio = fg_a_prod$bin_value / fg_b_prod$bin_value,
                breeder_density_ratio = fg_a_dens$bin_value / fg_b_dens$bin_value,
-               n_individuals = fg_a_dens$bin_count + fg_b_dens$bin_count)) %>%
+               n_individuals = pmin(fg_a_dens$bin_count, fg_b_dens$bin_count))) %>%
   bind_rows %>%
   mutate_if(is.double, ~ if_else(is.finite(.x), .x, as.numeric(NA)))
 
@@ -312,7 +313,7 @@ breeder_stats_bylight_2census <- breeder_stats_bylight %>%
             production_ratio_max = max(breeder_production_ratio),
             density_ratio_min = min(breeder_density_ratio),
             density_ratio_max = max(breeder_density_ratio),
-            mean_n_individuals = mean(n_individuals)) %>%
+            mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 breederscore_bin_bylight_2census <- binscore(dat = alltreedat[2:3], bindat = light_per_area_bins_allclassified, score_column = 'X2', class_column = 'light_area')
@@ -335,7 +336,7 @@ fastslow_stats_bydiam <- tibble(fg_a_prod = totalprodbin_byyear_bydiam[[1]],
                year = year,
                fastslow_production_ratio = fg_a_prod$bin_value / fg_b_prod$bin_value,
                fastslow_density_ratio = fg_a_dens$bin_value / fg_b_dens$bin_value,
-               n_individuals = fg_a_dens$bin_count + fg_b_dens$bin_count)) %>%
+               n_individuals = pmin(fg_a_dens$bin_count, fg_b_dens$bin_count))) %>%
   bind_rows %>%
   mutate_if(is.double, ~ if_else(is.finite(.x), .x, as.numeric(NA)))
 
@@ -352,7 +353,7 @@ fastslow_stats_bydiam_2census <- fastslow_stats_bydiam %>%
             production_ratio_max = max(fastslow_production_ratio),
             density_ratio_min = min(fastslow_density_ratio),
             density_ratio_max = max(fastslow_density_ratio),
-            mean_n_individuals = mean(n_individuals)) %>%
+            mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 fastslowscore_bin_bydiam_2census <- binscore(dat = alltreedat[2:3], bindat = dbhbin_allclassified, score_column = 'X1', class_column = 'dbh_corr')
@@ -368,7 +369,7 @@ fastslow_stats_bydiam_5census <- fastslow_stats_bydiam %>%
             production_ratio_max = max(fastslow_production_ratio),
             density_ratio_min = min(fastslow_density_ratio),
             density_ratio_max = max(fastslow_density_ratio),
-            mean_n_individuals = mean(n_individuals)) %>%
+            mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 # Fast to slow by light received per unit crown area (fg1 to fg3)
@@ -382,7 +383,7 @@ fastslow_stats_bylight <- tibble(fg_a_prod = totalprodbin_byyear_bylight[[1]],
                year = year,
                fastslow_production_ratio = fg_a_prod$bin_value / fg_b_prod$bin_value,
                fastslow_density_ratio = fg_a_dens$bin_value / fg_b_dens$bin_value,
-               n_individuals = fg_a_dens$bin_count + fg_b_dens$bin_count)) %>%
+               n_individuals = pmin(fg_a_dens$bin_count, fg_b_dens$bin_count))) %>%
   bind_rows %>%
   mutate_if(is.double, ~ if_else(is.finite(.x), .x, as.numeric(NA)))
 
@@ -399,7 +400,7 @@ fastslow_stats_bylight_2census <- fastslow_stats_bylight %>%
             production_ratio_max = max(fastslow_production_ratio),
             density_ratio_min = min(fastslow_density_ratio),
             density_ratio_max = max(fastslow_density_ratio),
-            mean_n_individuals = mean(n_individuals)) %>%
+            mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 fastslowscore_bin_bylight_2census <- binscore(dat = alltreedat[2:3], bindat = light_per_area_bins_allclassified, score_column = 'X1', class_column = 'light_area')
