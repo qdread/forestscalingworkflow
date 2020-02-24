@@ -8,15 +8,15 @@ library(tidyverse)
 library(forestscaling)
 library(broom)
 
-bohlman_raw <- read_csv('data/allometry_bci_trees_bohlman.csv')
-martinezS2 <- read_csv('/data/allometry_martinez-cano_table_s2.csv')
+bohlman_raw <- read_csv('data/BCI_raw/allometry_bci_trees_bohlman.csv')
+martinezS2 <- read_csv('/data/BCI_raw/allometry_martinez-cano_table_s2.csv')
 
 
 table(bohlman_raw$species)
 length(unique(bohlman_raw$species)) # 80 species
 
 # Cross reference allometry with FG lookup.
-fgbci <- read.table(file.path(gdrive_path, 'data/Ruger/fgroups_dynamics_new.txt'), stringsAsFactors = FALSE)
+fgbci <- read.table('data/Ruger/fgroups_dynamics_new.txt', stringsAsFactors = FALSE)
 
 # Correct functional groups so that: 1 fast, 2 pioneer, 3 slow, 4 breeder, 5 intermediate
 # Old 1,2,3,4,5 --> New 2,3,1,4,5
