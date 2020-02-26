@@ -1,6 +1,7 @@
 # Script to clean up all new piecewise output and put in tidy CSVs
 # QDR / Forestlight / 14 June 2019
 
+# Modified 26 Feb 2020: add summary table for fitted total production slope across intervals
 # Modified 20 June: add light params and R2s.
 # Modified 10 Sep: include sigma in production fits.
 
@@ -314,3 +315,60 @@ r2df <- r2df %>%
   filter(!fg %in% 'unclassified')
 
 write.csv(r2df, file.path(fp_out, 'clean_rsquared_growthperareabylightperarea.csv'), row.names = FALSE)
+
+
+# Fitted slopes of total production on intervals --------------------------
+
+# Read fitted slopes
+fitted_slopes <- read.csv('data/data_piecewisefits/piecewise_fitted_slopes_by_fg.csv', stringsAsFactors = FALSE) %>%
+  filter(variable %in% 'total_production', prod_model == 1)
+
+# Read parameters to get the cutoff points, reshape to put all in one row
+cutoffs <- read.csv('data/data_piecewisefits/piecewise_paramci_by_fg.csv', stringsAsFactors = FALSE) %>%
+  filter(variable %in% 'density', grepl('tau', parameter)) %>%
+  select(fg, parameter, q50) %>%
+  pivot_wider(names_from = parameter, values_from = q50)
+
+# Using cutoffs, calculate points at which to extract the fitted slopes
+# For model 1 it can be any point, for model 2 midpoint of upper and lower segment, for model 3 midpoint of each of the 3 segments
+dbh_range <- c(1, 285)
+slope_points <- cutoffs %>%
+  group_by(fg) %>%
+  mutate(point_1 = exp(mean(log(dbh_range))),
+         pointlow_2 = exp(mean(log(c(dbh_range[1], tau)))),
+         pointhigh_2 = exp(mean(log(c(dbh_range[2], tau)))),
+         pointlow_3 = exp(mean(log(c(dbh_range[1], tau_low)))),
+         pointmid_3 = exp(mean(log(c(tau_low, tau_high)))),
+         pointhigh_3 = exp(mean(log(c(dbh_range[2], tau_high))))) %>%
+  select(-(tau:tau_high)) %>%
+  pivot_longer(-fg) %>%
+  separate(name, into = c('point', 'dens_model'), sep = '_') %>%
+  mutate(dens_model = as.integer(dens_model))
+
+# Join the fitted slope data frame with the cutoff points and extract the slopes at the points closest to the midpoints
+slopes_at_points <- fitted_slopes %>%
+  left_join(slope_points) %>%
+  mutate(diff = abs(dbh - value)) %>%
+  group_by(fg, dens_model, point) %>%
+  filter(diff == min(diff)) %>%
+  select(year, fg, dens_model, point, q025:q975) %>%
+  ungroup
+
+# Add median cutoffs to the table
+cutoff_medians <- cutoffs %>%
+  group_by(fg) %>%
+  group_modify(~ data.frame(dens_model = c(1,2,2,3,3,3), 
+                            point = c('point','pointlow','pointhigh','pointlow','pointmid','pointhigh'),
+                            segment = c('all sized trees', 'small trees', 'large trees', 'small trees', 'midsize trees', 'large trees'),
+                            dbh_start = c(1, 1, .$tau, 1, .$tau_low, .$tau_high),
+                            dbh_end = c(285, .$tau, 285, .$tau_low, .$tau_high, 285)))
+
+# add descriptive names to table
+slope_table_final <- slopes_at_points %>%
+  left_join(cutoff_medians %>% ungroup) %>%
+  mutate(fg = fg_full_names[match(fg, fgs)],
+         dens_model = rep(c('one segment', 'two segment', 'two segment', 'three segment', 'three segment', 'three segment'), times = 7)) %>%
+  select(year, fg, dens_model, segment, dbh_start, dbh_end, q025:q975)
+  
+write.csv(slope_table_final, file.path(fp_out, 'clean_total_production_fitted_slopes.csv'), row.names = FALSE)
+
