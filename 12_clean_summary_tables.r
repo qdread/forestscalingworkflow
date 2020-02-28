@@ -372,3 +372,44 @@ slope_table_final <- slopes_at_points %>%
   
 write.csv(slope_table_final, file.path(fp_out, 'clean_total_production_fitted_slopes.csv'), row.names = FALSE)
 
+
+# Ratio slope tables ------------------------------------------------------
+
+# Read the data for ratio fitted slopes for diameter and remove duplicated rows
+ratioslopes_diameter <- read_csv('data_piecewisefits/ratio_slope_ci.csv')
+
+# Median cutoff points to define segments
+cutoffs_fastslow <- c(3.2, 9.8, 42.3, 48.2)
+cutoffs_breederpioneer <- c(2.1, 6.0, 18.9, 71.2)
+
+
+ratioslopes_diameter_fastslow <- ratioslopes_diameter %>%
+  filter(ratio == 'fast:slow') %>%
+  mutate(segment = cut(dbh, breaks = c(1, cutoffs_fastslow, 285), include.lowest = TRUE)) %>%
+  group_by(variable, segment) %>%
+  filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
+  slice(1) %>%
+  filter(!is.na(segment)) %>%
+  select(-dbh) %>%
+  mutate(scaling_variable = 'diameter') %>%
+  select(ratio, scaling_variable, segment, everything())
+
+ratioslopes_diameter_pioneerbreeder <- ratioslopes_diameter %>%
+  filter(ratio == 'pioneer:breeder') %>%
+  mutate(segment = cut(dbh, breaks = c(1, cutoffs_breederpioneer, 285), include.lowest = TRUE)) %>%
+  group_by(variable, segment) %>%
+  filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
+  slice(1) %>%
+  filter(!is.na(segment)) %>%
+  select(-dbh) %>%
+  mutate(scaling_variable = 'diameter') %>%
+  select(ratio, scaling_variable, segment, everything())
+
+ratioslopequantiles_light <- read_csv('data_piecewisefits/ratio_parameters_lightbyarea.csv') %>%
+  rename(scaling_variable = variable) %>%
+  mutate(segment = 'all', ratio = rep(c('fast:slow','pioneer:breeder'), each = 2), variable = rep(c('density', 'total production'), times = 2))
+
+allratioslopequantiles <- bind_rows(ratioslopes_diameter_fastslow, ratioslopes_diameter_pioneerbreeder, ratioslopequantiles_light) %>%
+  select(-q05, -q95) 
+  
+write.csv(allratioslopequantiles, file.path(fp_out, 'clean_ratio_fitted_slopes.csv'), row.names = FALSE)
