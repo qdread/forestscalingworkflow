@@ -31,8 +31,8 @@ growth9095 <- rbind(growth9095, recs9095l[, names(growth9095)])
 # Load census data. 1 = 1980, 2 = 1985, 3 = 1990, 4 = 1995, 5 = 2000, 6 = 2005, 7 = 2010.
 
 for (i in 1:7) {
-  load(file.path(fp, paste0('data/BCI_raw/bci.full', i, '.rdata')))
-  load(file.path(fp, paste0('data/BCI_raw/bci.stem', i, '.rdata')))
+  load(paste0('data/BCI_raw/bci.full', i, '.rdata'))
+  load(paste0('data/BCI_raw/bci.stem', i, '.rdata'))
 }
 
 # Get rid of tree ferns and strangler figs
