@@ -3,6 +3,22 @@
 
 # All fits allow the user to specify random seed and number of iterations.
 
+# Compile stan scripts and create executable
+# ==========================================
+
+# (This only needs to be run once out of the stan installation directory, before models are run)
+
+make O=3 model_scripts/density1
+make O=3 model_scripts/density2
+make O=3 model_scripts/density3
+make O=3 model_scripts/density1_simplified
+make O=3 model_scripts/density3_decreasingslopes
+make O=3 model_scripts/production1
+make O=3 model_scripts/production2
+make O=3 model_scripts/production1_nologlik
+make O=3 model_scripts/mortreg_fg_v3
+make O=3 model_scripts/vonb
+
 # All scalings: DIAMETER (x) AND BIOMASS PRODUCTION (y)
 # =====================================================
 
@@ -140,20 +156,5 @@ sbatch --export=scaling=light,guild=fg4,year=1995,model=vonb,NS=1000,NW=5000,see
 sbatch --export=scaling=light,guild=fg5,year=1995,model=vonb,NS=1000,NW=5000,seed=8815 --time=4:00:00 --job-name=vonb_5 fitpiecewise.sh
 sbatch --export=scaling=light,guild=unclassified,year=1995,model=vonb,NS=1000,NW=5000,seed=8816 --time=4:00:00 --job-name=vonb_u fitpiecewise.sh
 sbatch --export=scaling=light,guild=alltree,year=1995,model=vonb,NS=1000,NW=5000,seed=8817 --time=4:00:00 --job-name=vonb_a fitpiecewise.sh
-
-# Chains that did not converge (rerun)
-# ====================================
-
-sbatch --export=scaling=production,guild=alltree,year=1995,model=production2,NS=1000,NW=5000,seed=2517 --time=7-00:00:00 --job-name=p2_a --array=2 fitpiecewise.sh
-
-sbatch --export=scaling=production,guild=fg3,year=1995,model=density3,NS=1000,NW=5000,seed=3 --time=4-00:00:00 --job-name=d3_3 fitpiecewise_newargs.sh # old model, new model fitting parameters
-
-sbatch --export=scaling=production,guild=fg3,year=1995,model=density3_decreasingslopes,NS=1000,NW=7500,seed=666 --time=4-00:00:00 --job-name=d3_newprior fitpiecewise.sh # model with tightened priors.
-sbatch --export=scaling=production,guild=fg3,year=1995,model=density3_decreasingslopes,NS=1000,NW=7500,seed=888 --time=4-00:00:00 --job-name=d3_newprior --array=4-30 fitpiecewise.sh # model with tightened priors. # Use 8,21,25.
-#sbatch --export=scaling=production,guild=alltree,year=1995,model=density3,NS=1000,NW=5000,seed=11317 --time=7-00:00:00 --job-name=d3_a --array=1-2 fitpiecewise.sh
-#sbatch --export=scaling=volumescaling,guild=unclassified,year=1995,model=production1,NS=1000,NW=5000,seed=19916 --time=7-00:00:00 --job-name=v1_u fitpiecewise.sh
-#sbatch --export=scaling=diamgrowthscaling,guild=fg4,year=1995,model=production2,NS=1000,NW=5000,seed=9514 --time=7-00:00:00 --job-name=dg2_4 --array=2 fitpiecewise.sh
-
-#sbatch --export=scaling=production,guild=alltree,year=1995,model=density3,NS=1000,NW=5000,seed=33317 --time=7-00:00:00 --job-name=d3_a --array=2 fitpiecewise.sh
 
 
