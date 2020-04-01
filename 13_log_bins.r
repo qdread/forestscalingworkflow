@@ -1,5 +1,6 @@
 # Script 3: Create log-bins for all variables.
 
+# Modified on 01 April 2020: change nomenclature
 # Modified on 20 February 2020: For ratios, use minimum number of individuals across the 2 groups being compared, rather than total
 # Modified on 13 January 2020: Use imputed production (1 segment) to create total production bins -- note this must now be run AFTER models are all fit.
 # Modified on 13 January 2020: For individual production, diameter growth, and production per area, remove the recruits.
@@ -74,12 +75,12 @@ densitybin_5census <- cbind(fg = rep(group_names, each = numbins),
 # Take the mean and 2.5, 50 (median), 97.5 quantiles within each bin.
 # Do it across all years, and for separate years.
 # Exclude new recruits (added 13 Jan 2020)
-prodbin_all_byyear <- alltreedat_norecruits[-1] %>% map(~ fakebin_across_years(dat_values = .$production, dat_classes = .$dbh_corr, edges = dbhbin_allclassified, n_census = 1))
+prodbin_all_byyear <- alltreedat_norecruits[-1] %>% map(~ cloudbin_across_years(dat_values = .$production, dat_classes = .$dbh_corr, edges = dbhbin_allclassified, n_census = 1))
 prodbin_fg_byyear <- alltreedat_norecruits[-1] %>%
   map(function(dat) {
     dat %>%
       group_by(fg) %>%
-      do(fakebin_across_years(dat_values = .$production, dat_classes = .$dbh_corr, edges = dbhbin_allclassified, n_census = 1))
+      do(cloudbin_across_years(dat_values = .$production, dat_classes = .$dbh_corr, edges = dbhbin_allclassified, n_census = 1))
   })
 
 allyearprod <- map(alltreedat_norecruits[-1], ~ pull(., production)) %>% unlist
@@ -94,10 +95,10 @@ indivproductionbin_byyear <- bind_rows(
   select(-mean_n_individuals)
 
 # Combine multiple year bin into single df.
-prodbin_all_5census <- fakebin_across_years(dat_values = allyearprod, dat_classes = allyeardbh_norecruits, edges = dbhbin_all)
-prodbin_allclassified_5census <- fakebin_across_years(dat_values = allyearprod_classified, dat_classes = allyeardbh_classified_norecruits, edges = dbhbin_allclassified)
+prodbin_all_5census <- cloudbin_across_years(dat_values = allyearprod, dat_classes = allyeardbh_norecruits, edges = dbhbin_all)
+prodbin_allclassified_5census <- cloudbin_across_years(dat_values = allyearprod_classified, dat_classes = allyeardbh_classified_norecruits, edges = dbhbin_allclassified)
 
-prodbin_fg_5census <- map2(allyearprod_fg, allyeardbh_fg_norecruits, ~ fakebin_across_years(dat_values = .x, dat_classes = .y, edges = dbhbin_allclassified))
+prodbin_fg_5census <- map2(allyearprod_fg, allyeardbh_fg_norecruits, ~ cloudbin_across_years(dat_values = .x, dat_classes = .y, edges = dbhbin_allclassified))
 
 indivproductionbin_5census <- cbind(fg = rep(group_names, each = numbins),
                                     rbind(prodbin_all_5census, prodbin_allclassified_5census, do.call('rbind', prodbin_fg_5census)))
@@ -200,7 +201,6 @@ lightpervolumebins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightpervolu
 # Production and light received per meter squared of crown area.
 # Divide production by crown area and bin (1990 and 1995)
 # Divide light received by crown area and bin (1990 and 1995)
-# These are "fake" bins because it's just an individual measurement
 
 # Bin the entire light received per crown area dataset for 1990 and 1995 into a single set of bin edges.
 light_per_area_all <- alltreedat[2:3] %>% map(~ .$light_received/.$crownarea) %>% unlist
@@ -270,7 +270,7 @@ breeder_stats_bydiam_byyear <- breeder_stats_bydiam %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 breederscore_bin_bydiam_2census <- binscore(dat = alltreedat[2:3], bindat = dbhbin_allclassified, score_column = 'X2', class_column = 'dbh_corr')
-breederscore_bin_bydiam_byyear <- map2_dfr(alltreedat[2:6], years, ~ data.frame(year = .y, fakebin_across_years(dat_values = .x$X2[!is.na(.x$X2)], dat_classes = .x$dbh_corr[!is.na(.x$X2)], edges = dbhbin_allclassified, mean = 'arithmetic', n_census = 1))) %>%
+breederscore_bin_bydiam_byyear <- map2_dfr(alltreedat[2:6], years, ~ data.frame(year = .y, cloudbin_across_years(dat_values = .x$X2[!is.na(.x$X2)], dat_classes = .x$dbh_corr[!is.na(.x$X2)], edges = dbhbin_allclassified, mean = 'arithmetic', n_census = 1))) %>%
   select(-mean_n_individuals)
 
 breeder_stats_bydiam_5census <- breeder_stats_bydiam %>% 
@@ -320,7 +320,7 @@ breederscore_bin_bylight_2census <- binscore(dat = alltreedat[2:3], bindat = lig
 breederscore_bin_bylight_byyear <- alltreedat[2:3] %>%
   map2_dfr(c(1990, 1995), function(x, y) {
     x <- x %>% filter(!is.na(X2), !is.na(light_received), !is.na(crownarea))
-    data.frame(year = y, fakebin_across_years(dat_values = x$X2, dat_classes = (x$light_received/x$crownarea), edges = light_per_area_bins_allclassified, mean = 'arithmetic', n_census = 1))
+    data.frame(year = y, cloudbin_across_years(dat_values = x$X2, dat_classes = (x$light_received/x$crownarea), edges = light_per_area_bins_allclassified, mean = 'arithmetic', n_census = 1))
   }) %>%
   select(-mean_n_individuals)
 
@@ -357,7 +357,7 @@ fastslow_stats_bydiam_2census <- fastslow_stats_bydiam %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
 fastslowscore_bin_bydiam_2census <- binscore(dat = alltreedat[2:3], bindat = dbhbin_allclassified, score_column = 'X1', class_column = 'dbh_corr')
-fastslowscore_bin_bydiam_byyear <- map2_dfr(alltreedat[2:6], years, ~ data.frame(year = .y, fakebin_across_years(dat_values = .x$X1[!is.na(.x$X1)], dat_classes = .x$dbh_corr[!is.na(.x$X1)], edges = dbhbin_allclassified, mean = 'arithmetic', n_census = 1))) %>%
+fastslowscore_bin_bydiam_byyear <- map2_dfr(alltreedat[2:6], years, ~ data.frame(year = .y, cloudbin_across_years(dat_values = .x$X1[!is.na(.x$X1)], dat_classes = .x$dbh_corr[!is.na(.x$X1)], edges = dbhbin_allclassified, mean = 'arithmetic', n_census = 1))) %>%
   select(-mean_n_individuals)
 
 
@@ -407,7 +407,7 @@ fastslowscore_bin_bylight_2census <- binscore(dat = alltreedat[2:3], bindat = li
 fastslowscore_bin_bylight_byyear <- alltreedat[2:3] %>%
   map2_dfr(c(1990, 1995), function(x, y) {
     x <- x %>% filter(!is.na(X1), !is.na(light_received), !is.na(crownarea))
-    data.frame(year = y, fakebin_across_years(dat_values = x$X1, dat_classes = (x$light_received/x$crownarea), edges = light_per_area_bins_allclassified, mean = 'arithmetic', n_census = 1))
+    data.frame(year = y, cloudbin_across_years(dat_values = x$X1, dat_classes = (x$light_received/x$crownarea), edges = light_per_area_bins_allclassified, mean = 'arithmetic', n_census = 1))
   }) %>%
   select(-mean_n_individuals)
 

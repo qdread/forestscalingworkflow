@@ -66,7 +66,7 @@ write.csv(totalvolbins_fg, file.path(fp_out, 'obs_totalvol.csv'), row.names = FA
 
 # Observed individual production
 obs_indivprod_df <- map(alltreedat[-1],
-                         function(x) with(x %>% filter(!recruit), fakebin_across_years(dat_values = production, dat_classes = dbh_corr, edges = binedgedata, n_census = 1)))
+                         function(x) with(x %>% filter(!recruit), cloudbin_across_years(dat_values = production, dat_classes = dbh_corr, edges = binedgedata, n_census = 1)))
 obs_indivprod_df <- cbind(fg = 'all', year = rep(years, each = nrow(binedgedata)), do.call(rbind, obs_indivprod_df))
 
 obs_indivprod_fg <- replicate(length(fg_names), list())
@@ -75,10 +75,10 @@ for (i in 1:length(fg_names)) {
   for (j in 1:length(years)) {
     obs_indivprod_fg[[i]][[j]] <-
       cbind(fg = fg_names[i], year = years[j],
-            fakebin_across_years(dat_values = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(production),
-                                 dat_classes = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(dbh_corr),
-                                 edges = binedgedata,
-                                 n_census = 1))
+            cloudbin_across_years(dat_values = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(production),
+                                  dat_classes = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(dbh_corr),
+                                  edges = binedgedata,
+                                  n_census = 1))
   }
 }
 
@@ -239,21 +239,21 @@ numbins <- 20
 
 light_bins_9095 <- logbin(x = c(dat90$light_area, dat95$light_area), n = numbins)
 
-prod_light_bin_90 <- fakebin_across_years(dat_values = dat90$production_area,
-                                          dat_classes = dat90$light_area,
-                                          edges = light_bins_9095,
-                                          n_census = 1)
-prod_light_bin_95 <- fakebin_across_years(dat_values = dat95$production_area,
-                                          dat_classes = dat95$light_area,
-                                          edges = light_bins_9095,
-                                          n_census = 1)
+prod_light_bin_90 <- cloudbin_across_years(dat_values = dat90$production_area,
+                                           dat_classes = dat90$light_area,
+                                           edges = light_bins_9095,
+                                           n_census = 1)
+prod_light_bin_95 <- cloudbin_across_years(dat_values = dat95$production_area,
+                                           dat_classes = dat95$light_area,
+                                           edges = light_bins_9095,
+                                           n_census = 1)
 
 prod_light_bin_fg_90 <- dat90 %>%
   group_by(fg) %>%
-  do(bin = fakebin_across_years(dat_values = .$production_area,
-                                dat_classes = .$light_area,
-                                edges = light_bins_9095,
-                                n_census = 1))
+  do(bin = cloudbin_across_years(dat_values = .$production_area,
+                                 dat_classes = .$light_area,
+                                 edges = light_bins_9095,
+                                 n_census = 1))
 
 prod_light_bin_fg_90 <- cbind(fg = rep(c('fg1','fg2','fg3','fg4','fg5','unclassified'), each = numbins),
                               do.call(rbind, prod_light_bin_fg_90$bin)) %>%
@@ -261,10 +261,10 @@ prod_light_bin_fg_90 <- cbind(fg = rep(c('fg1','fg2','fg3','fg4','fg5','unclassi
 
 prod_light_bin_fg_95 <- dat95 %>%
   group_by(fg) %>%
-  do(bin = fakebin_across_years(dat_values = .$production_area,
-                                dat_classes = .$light_area,
-                                edges = light_bins_9095,
-                                n_census = 1))
+  do(bin = cloudbin_across_years(dat_values = .$production_area,
+                                 dat_classes = .$light_area,
+                                 edges = light_bins_9095,
+                                 n_census = 1))
 
 prod_light_bin_fg_95 <- cbind(fg = rep(c('fg1','fg2','fg3','fg4','fg5','unclassified'), each = numbins),
                               do.call(rbind, prod_light_bin_fg_95$bin)) %>%
@@ -318,74 +318,69 @@ system2("cp", args = paste('finalcsvs/lightbyarea_predci_by_fg.csv', file.path(f
 
 # Create bin data for MS figure 5 -----------------------------------------
 
+# Edited 01 Apr 2020 to add (geometric) means, fix NA bin.
+
+light_bin_stats <- function(indivs) {
+  qs <- quantile(indivs, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
+    setNames(c('q025','q25','q50','q75','q975'))
+  ci_width <- qnorm(0.975) * sd(log(indivs))/sqrt(length(indivs))
+  data.frame(t(qs), 
+             mean = exp(mean(log(indivs))),
+             sd = exp(sd(log(indivs))),
+             ci_min = exp(mean(log(indivs)) - ci_width),
+             ci_max = exp(mean(log(indivs)) + ci_width))
+}
+
 alltree_light_95 <- alltree_light_95 %>%
   mutate(fg = if_else(!is.na(fg), paste0('fg',fg), as.character(NA)))
 
 dbhbin1995 <- with(alltree_light_95, logbin(x = dbh_corr, n = 20))
 
-lightperareafakebin_fg <- alltree_light_95 %>%
-  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+lightperareacloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(fg, dbh_bin) %>%
-  do(quantile(.$light_received/.$crownarea, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
-       t %>% 
-       as.data.frame %>%
-       setNames(c('q025','q25','q50','q75','q975')))
+  group_modify(~ light_bin_stats(.$light_received/.$crownarea))
 
-lightperareafakebin_all <- alltree_light_95 %>%
-  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+lightperareacloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(dbh_bin) %>%
-  do(quantile(.$light_received/.$crownarea, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
-       t %>% 
-       as.data.frame %>%
-       setNames(c('q025','q25','q50','q75','q975')))
+  group_modify(~ light_bin_stats(.$light_received/.$crownarea))
 
-lightperareafakebin_fg <- data.frame(fg = 'all', lightperareafakebin_all, stringsAsFactors = FALSE) %>%
-  rbind(as.data.frame(lightperareafakebin_fg)) %>%
+lightperareacloudbin_fg <- data.frame(fg = 'all', lightperareacloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(lightperareacloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
-lightpervolfakebin_fg <- alltree_light_95 %>%
-  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+lightpervolcloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(fg, dbh_bin) %>%
-  do(quantile(.$light_received/.$crownvolume, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
-       t %>% 
-       as.data.frame %>%
-       setNames(c('q025','q25','q50','q75','q975')))
+  group_modify(~ light_bin_stats(.$light_received/.$crownvolume))
 
-lightpervolfakebin_all <- alltree_light_95 %>%
-  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+lightpervolcloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(dbh_bin) %>%
-  do(quantile(.$light_received/.$crownvolume, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
-       t %>% 
-       as.data.frame %>%
-       setNames(c('q025','q25','q50','q75','q975')))
+  group_modify(~ light_bin_stats(.$light_received/.$crownvolume))
 
-lightpervolfakebin_fg <- data.frame(fg = 'all', lightpervolfakebin_all, stringsAsFactors = FALSE) %>%
-  rbind(as.data.frame(lightpervolfakebin_fg)) %>%
+lightpervolcloudbin_fg <- data.frame(fg = 'all', lightpervolcloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(lightpervolcloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
-unscaledlightbydbhfakebin_fg <- alltree_light_95 %>%
-  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+unscaledlightbydbhcloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(fg, dbh_bin) %>%
-  do(quantile(.$light_received, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
-       t %>% 
-       as.data.frame %>%
-       setNames(c('q025','q25','q50','q75','q975')))
+  group_modify(~ light_bin_stats(.$light_received))
 
-unscaledlightbydbhfakebin_all <- alltree_light_95 %>%
-  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+unscaledlightbydbhcloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(dbh_bin) %>%
-  do(quantile(.$light_received, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
-       t %>% 
-       as.data.frame %>%
-       setNames(c('q025','q25','q50','q75','q975')))
+  group_modify(~ light_bin_stats(.$light_received))
 
-unscaledlightbydbhfakebin_fg <- data.frame(fg = 'all', unscaledlightbydbhfakebin_all, stringsAsFactors = FALSE) %>%
-  rbind(as.data.frame(unscaledlightbydbhfakebin_fg)) %>%
+unscaledlightbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightbydbhcloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(unscaledlightbydbhcloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
-write.csv(lightperareafakebin_fg, file.path(fp_out, 'lightperareafakebin_fg.csv'), row.names = FALSE)
-write.csv(lightpervolfakebin_fg, file.path(fp_out, 'lightpervolfakebin_fg.csv'), row.names = FALSE)
-write.csv(unscaledlightbydbhfakebin_fg, file.path(fp_out, 'unscaledlightbydbhfakebin_fg.csv'), row.names = FALSE)
+write.csv(lightperareacloudbin_fg, file.path(fp_out, 'lightperareacloudbin_fg.csv'), row.names = FALSE)
+write.csv(lightpervolcloudbin_fg, file.path(fp_out, 'lightpervolcloudbin_fg.csv'), row.names = FALSE)
+write.csv(unscaledlightbydbhcloudbin_fg, file.path(fp_out, 'unscaledlightbydbhcloudbin_fg.csv'), row.names = FALSE)
 
 
 # Diameter growth plots ---------------------------------------------------
@@ -393,7 +388,7 @@ write.csv(unscaledlightbydbhfakebin_fg, file.path(fp_out, 'unscaledlightbydbhfak
 
 # Observed individual diameter growth
 obs_indivdiamgrowth_df <- map(alltreedat[-1],
-                        function(x) with(x %>% filter(!recruit), fakebin_across_years(dat_values = diam_growth_rate, dat_classes = dbh_corr, edges = binedgedata, n_census = 1)))
+                        function(x) with(x %>% filter(!recruit), cloudbin_across_years(dat_values = diam_growth_rate, dat_classes = dbh_corr, edges = binedgedata, n_census = 1)))
 obs_indivdiamgrowth_df <- cbind(fg = 'all', year = rep(years, each = nrow(binedgedata)), do.call(rbind, obs_indivdiamgrowth_df))
 
 obs_indivdiamgrowth_fg <- replicate(length(fg_names), list())
@@ -402,10 +397,10 @@ for (i in 1:length(fg_names)) {
   for (j in 1:length(years)) {
     obs_indivdiamgrowth_fg[[i]][[j]] <-
       cbind(fg = fg_names[i], year = years[j],
-            fakebin_across_years(dat_values = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(diam_growth_rate),
-                                 dat_classes = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(dbh_corr),
-                                 edges = binedgedata,
-                                 n_census = 1))
+            cloudbin_across_years(dat_values = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(diam_growth_rate),
+                                  dat_classes = fgdat[[i]][[j+1]] %>% filter(!recruit) %>% pull(dbh_corr),
+                                  edges = binedgedata,
+                                  n_census = 1))
   }
 }
 
