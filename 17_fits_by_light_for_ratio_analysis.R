@@ -4,6 +4,8 @@
 # These are fits that are used to construct the ratio fits in Figure 6A.
 # QDR / 31 March 2020
 
+# Edited 13 April 2020: Include additional computations to create data for plotting, so that the plotting script only contains plotting code.
+
 library(tidyverse)
 library(rstan)
 library(forestscaling)
@@ -164,3 +166,70 @@ allpars_lightarea_quantiles <- allpars_lightarea %>%
 data.frame(variable = 'light per area', slope = dimnames(allpars_lightarea_quantiles)[[2]], t(allpars_lightarea_quantiles)) %>%
   setNames(c('variable','ratio','q025', 'q25', 'q50', 'q75', 'q975')) %>%
   write_csv('data/data_piecewisefits/ratio_parameters_lightbyarea.csv')
+  
+# Code to create plotting data
+# ----------------------------
+
+# Get credible intervals --------------------------------------------------
+
+# Multiply density and total production times number of individuals, and divide by area
+area_core <- 42.84
+fg_names <- c('Fast', 'Tall', 'Slow', 'Short')
+
+dens_pred_fg_lightarea_quantiles <- map2(dens_pred_fg_lightarea, map(stan_data_list, 'N'), function(dat, N) {
+  do.call(cbind, dat) %>%
+    sweep(2, N/area_core, `*`) %>%
+    apply(1, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE) %>%
+    t %>% as.data.frame %>% setNames(c('q025', 'q50', 'q975')) %>%
+    mutate(light_area = la_pred)
+})
+
+dens_pred_dat <- map2_dfr(dens_pred_fg_lightarea_quantiles, fg_names,
+                          ~ data.frame(fg = .y, .x)) %>%
+  mutate(fg = factor(fg, levels = fg_names))
+
+prod_pred_fg_lightarea_quantiles <- map(prod_pred_fg_lightarea, function(dat) {
+  do.call(cbind, dat) %>%
+    apply(1, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE) %>%
+    t %>% as.data.frame %>% setNames(c('q025', 'q50', 'q975')) %>%
+    mutate(light_area = la_pred)
+}) 
+
+prod_pred_dat <- map2_dfr(prod_pred_fg_lightarea_quantiles, fg_names,
+                          ~ data.frame(fg = .y, .x)) %>%
+  mutate(fg = factor(fg, levels = fg_names))
+
+totalprod_pred_fg_lightarea_quantiles <- map2(totalprod_pred_fg_lightarea, map(stan_data_list, 'N'), function(dat, N) {
+  dat %>%
+    sweep(2, N/area_core, `*`) %>%
+    apply(1, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE) %>%
+    t %>% as.data.frame %>% setNames(c('q025', 'q50', 'q975')) %>%
+    mutate(light_area = la_pred)
+})
+
+totalprod_pred_dat <- map2_dfr(totalprod_pred_fg_lightarea_quantiles, fg_names,
+                               ~ data.frame(fg = .y, .x)) %>%
+  mutate(fg = factor(fg, levels = fg_names))
+
+
+data_to_bin <- alltree_light_95 %>%
+  filter(fg %in% 1:4) %>%
+  mutate(fg = factor(fg, labels = fg_names)) %>%
+  select(fg, light_received_byarea, production)
+
+# Determine bin edges by binning all
+binedgedat <- with(data_to_bin, logbin(light_received_byarea, n = 20))
+
+obs_dens <- data_to_bin %>%
+  group_by(fg) %>%
+  group_modify(~ logbin_setedges(x = .$light_received_byarea, edges = binedgedat))
+
+obs_totalprod <- data_to_bin %>%
+  group_by(fg) %>%
+  group_modify(~ logbin_setedges(x = .$light_received_byarea, y = .$production, edges = binedgedat))
+
+obs_indivprod <- data_to_bin %>%
+  group_by(fg) %>%
+  group_modify(~ cloudbin_across_years(dat_values = .$production, dat_classes = .$light_received_byarea, edges = binedgedat, n_census = 1))
+
+save(dens_pred_dat, prod_pred_dat, obs_dens, obs_totalprod, obs_indivprod, file = 'data/data_forplotting/light_scaling_plotting_data.RData')
