@@ -10,10 +10,10 @@ library(forestscaling)
 
 # Load raw data and the parameter values 
 
-load(file.path(gdrive_path, 'data/rawdataobj_alternativecluster.r'))
+load('data/rawdataobj_alternativecluster.r')
 
-params <- read_csv(file.path(gdrive_path, 'finalcsvs/piecewise_paramci_by_fg.csv')) # parameter values
-cfs <- read_csv(file.path(gdrive_path, 'finalcsvs/piecewise_cf_by_fg.csv')) # bias correction factors
+params <- read_csv('finalcsvs/piecewise_paramci_by_fg.csv')) # parameter values
+cfs <- read_csv('finalcsvs/piecewise_cf_by_fg.csv') # bias correction factors
 
 # Reshape parameter and correction factor DFs into wide format.
 prodpars_wide <- params %>%
@@ -93,4 +93,4 @@ light_fg_95 <- map(light_fg_95, function(x) x %>% mutate(production_imputed1 = i
 fgdat <- map(fgdat, function(y) map(y, function(x) x %>% mutate(production_imputed1 = impute_production_bymodel(x, 1),
                                                                 production_imputed2 = impute_production_bymodel(x, 2))))
 
-save(alltree_light_90, alltree_light_95, alltreedat, light_fg_90, light_fg_95, fgdat, file = file.path(gdrive_path, 'data/rawdataobj_withimputedproduction.RData'))
+save(alltree_light_90, alltree_light_95, alltreedat, light_fg_90, light_fg_95, fgdat, file = 'data/rawdataobj_withimputedproduction.RData')

@@ -353,12 +353,12 @@ lightperareacloudbin_fg <- data.frame(fg = 'all', lightperareacloudbin_all, stri
 lightpervolcloudbin_fg <- alltree_light_95 %>%
   mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(fg, dbh_bin) %>%
-  group_modify(~ light_bin_stats(.$light_received/.$crownvolume))
+  group_modify(~ light_bin_stats(.$light_received_byvolume))
 
 lightpervolcloudbin_all <- alltree_light_95 %>%
   mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min[1], dbhbin1995$bin_max + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(dbh_bin) %>%
-  group_modify(~ light_bin_stats(.$light_received/.$crownvolume))
+  group_modify(~ light_bin_stats(.$light_received_byvolume))
 
 lightpervolcloudbin_fg <- data.frame(fg = 'all', lightpervolcloudbin_all, stringsAsFactors = FALSE) %>%
   rbind(as.data.frame(lightpervolcloudbin_fg)) %>%

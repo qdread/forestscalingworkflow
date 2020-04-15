@@ -1,5 +1,6 @@
-# Script 2: Correct growth increments, remove outliers, join light data, and apply allometries.
+# Script 4: Correct growth increments, remove outliers, join light data, and apply allometries.
 
+# modified 14 April 2020: use Kitajima et al. 2005 data to establish scaling relationship between LAI and crown depth.
 # modified 09 January 2020: add column flagging new recruits so that they can be excluded from later analyses
 # modified 11 November 2019: replace overall allometries with species-specific allometries
 # modified 30 October 2019: move binning to another script.
@@ -143,6 +144,19 @@ bcicensusdat[[3]] <- bcicensusdat[[3]] %>%
 
 overall_k <- 0.5 # Roughly the mean light extinction coefficient for the Panamanian species in Kitajima et al. 2005.
 
+# Get slope and intercept relating LAI to crown depth, from Kitajima et al. 2005 data.
+library(brms)
+
+lai_depth <- read_csv('data/LAI_Depth_Kitajima2005.csv') %>%
+  mutate(log_LAI = log10(LAI),
+         log_depth = log10(Depth)) %>%
+  filter(!Species %in% 'Cecropia')
+
+# Fit Bayesian random-intercept, random-slope model
+lai_fit <- brm(log_LAI ~ log_depth + (log_depth | Species), data = lai_depth, family = 'gaussian', chains = 3, iter = 15000, warmup = 12500, seed = 111)
+# Extract parameter estimates for slope and intercept
+lai_coefs <- summary(lai_fit)$fixed[,'Estimate']
+
 for (i in 2:3) {
   
   # Generate lookup table for coefficients
@@ -157,7 +171,7 @@ for (i in 2:3) {
            crowndepth = coef_table$crowndepth_corr_factor * exp(coef_table$crowndepth_a + coef_table$crowndepth_b * log(dbh_corr)),
            crownvolume = (2/3) * crownarea * crowndepth, # Half-ellipsoid
            light_received = light * crownarea * insol_bci,
-           fraction_light_captured = pct_light_captured(depth = crowndepth, k = overall_k),
+           fraction_light_captured = pct_light_captured(depth = 10^lai_coefs[1] * crowndepth^lai_coefs[2], k = overall_k),
            light_received_byarea = light * insol_bci,
            light_received_byvolume = light * fraction_light_captured * crownarea * insol_bci / crownvolume)
 
