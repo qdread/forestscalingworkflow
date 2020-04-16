@@ -184,7 +184,7 @@ dens_pred_fg_lightarea_quantiles <- map2(dens_pred_fg_lightarea, map(stan_data_l
     mutate(light_area = la_pred)
 })
 
-dens_pred_dat <- map2_dfr(dens_pred_fg_lightarea_quantiles, fg_names,
+dens_pred_dat_lightarea <- map2_dfr(dens_pred_fg_lightarea_quantiles, fg_names,
                           ~ data.frame(fg = .y, .x)) %>%
   mutate(fg = factor(fg, levels = fg_names))
 
@@ -195,7 +195,7 @@ prod_pred_fg_lightarea_quantiles <- map(prod_pred_fg_lightarea, function(dat) {
     mutate(light_area = la_pred)
 }) 
 
-prod_pred_dat <- map2_dfr(prod_pred_fg_lightarea_quantiles, fg_names,
+prod_pred_dat_lightarea <- map2_dfr(prod_pred_fg_lightarea_quantiles, fg_names,
                           ~ data.frame(fg = .y, .x)) %>%
   mutate(fg = factor(fg, levels = fg_names))
 
@@ -207,7 +207,7 @@ totalprod_pred_fg_lightarea_quantiles <- map2(totalprod_pred_fg_lightarea, map(s
     mutate(light_area = la_pred)
 })
 
-totalprod_pred_dat <- map2_dfr(totalprod_pred_fg_lightarea_quantiles, fg_names,
+totalprod_pred_dat_lightarea <- map2_dfr(totalprod_pred_fg_lightarea_quantiles, fg_names,
                                ~ data.frame(fg = .y, .x)) %>%
   mutate(fg = factor(fg, levels = fg_names))
 
@@ -220,16 +220,16 @@ data_to_bin <- alltree_light_95 %>%
 # Determine bin edges by binning all
 binedgedat <- with(data_to_bin, logbin(light_received_byarea, n = 20))
 
-obs_dens <- data_to_bin %>%
+obs_dens_lightarea <- data_to_bin %>%
   group_by(fg) %>%
   group_modify(~ logbin_setedges(x = .$light_received_byarea, edges = binedgedat))
 
-obs_totalprod <- data_to_bin %>%
+obs_totalprod_lightarea <- data_to_bin %>%
   group_by(fg) %>%
   group_modify(~ logbin_setedges(x = .$light_received_byarea, y = .$production, edges = binedgedat))
 
-obs_indivprod <- data_to_bin %>%
+obs_indivprod_lightarea <- data_to_bin %>%
   group_by(fg) %>%
   group_modify(~ cloudbin_across_years(dat_values = .$production, dat_classes = .$light_received_byarea, edges = binedgedat, n_census = 1))
 
-save(dens_pred_dat, prod_pred_dat, obs_dens, obs_totalprod, obs_indivprod, file = 'data/data_forplotting/light_scaling_plotting_data.RData')
+save(dens_pred_dat_lightarea, prod_pred_dat_lightarea, totalprod_pred_dat_lightarea, obs_dens_lightarea, obs_totalprod_lightarea, obs_indivprod_lightarea, file = 'data/data_forplotting/light_scaling_plotting_data.RData')
