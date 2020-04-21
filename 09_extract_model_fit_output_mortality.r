@@ -42,6 +42,28 @@ fitted_quant <- param_all %>%
 
 # Get Bayesian R-squared (Skip for now, can add later)
 # To do this the original data are needed for all data points to get the linear predictor.
+source('stanrdump/mortalitydump.r')
+
+# Loop through parameter estimates for each iteration and calculate R-squared.
+# Linear predictor:
+mort_rsq <- rep(0, 3000)
+allpars <- rstan::extract(fit)
+
+for (i in 1:3000) {
+
+	alpha <- allpars$alpha[i]
+	alpha_fg <- allpars$alpha_fg[i, ]
+	beta <- allpars$beta[i]
+	beta_fg <- allpars$beta_fg[i, ]
+	mort_fitted <- plogis(alpha + alpha_fg[fg] + beta + beta_fg[fg] + log10(x))
+	mort_residuals <- y - mort_fitted
+	mort_var_fitted <- var(mort_fitted)
+	mort_var_resid <- var(mort_residuals)
+	mort_rsq[i] <- mort_var_fitted / (mort_var_fitted + mort_var_resid)
+	
+}
+
+quantile(mort_rsq, probs = c(0.025, 0.5, 0.975)) # 0.159, 0.162, 0.165
 
 # Write all output
 write_csv(params, 'finalcsvs/mortality_paramci_by_fg.csv')
