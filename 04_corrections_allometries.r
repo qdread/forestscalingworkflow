@@ -206,6 +206,10 @@ light_fg_90 <- lapply(fgdat, function(x) subset(x[[2]], !is.na(light)))
 light_fg_95 <- lapply(fgdat, function(x) subset(x[[3]], !is.na(light)))
 
 
-# Save raw data as an object (this intermediate file is not saved in repo)
+# Save raw data as an object 
 save(alltreedat, fgdat, alltree_light_90, alltree_light_95, light_fg_90, light_fg_95, file = 'data/rawdataobj_alternativecluster.r')
+
+# Save raw data for 1995 only, not separated by fg, so that a small object can be versioned on the repo.
+save(alltreedat, alltree_light_95, file = 'data/rawdataobj1995.RData')
+
 
