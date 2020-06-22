@@ -47,3 +47,18 @@ coef_table <-rbind(
             data.frame(regression = 'light per unit crown volume versus dbh', parameter = c('r-squared'), Estimate = volume_rsq)))
 
 write_csv(coef_table, 'data/clean_summary_tables/fig1_light_by_size_parameters.csv')
+
+# save fitted values and credible intervals
+dbh_pred <- exp(seq(log(1), log(315), length.out = 101))
+
+fitted_area <- fitted(reg_area, newdata = data.frame(dbh = dbh_pred), summary = TRUE)
+fitted_volume <- fitted(reg_volume, newdata = data.frame(dbh = dbh_pred), summary = TRUE)
+
+fitted_all <- data.frame(dbh = dbh_pred,
+                         rbind(data.frame(fit = 'light per area', fitted_area),
+                               data.frame(fit = 'light per volume', fitted_volume))) %>%
+  rename(q50 = Estimate, q025 = Q2.5, q975 = Q97.5) %>%
+  mutate(q50 = 10^q50, q025 = 10^q025, q975 = 10^q975) %>%
+  select(fit, dbh, q025, q50, q975)
+
+write_csv(fitted_all, 'data/data_forplotting/fitted_lightbysizealltrees_fig1.csv')
