@@ -106,6 +106,8 @@ mod_3seg_linear <- stan_model('model_scripts/richness_3segment_linearmodel.stan'
 mod_2seg_mixed <- stan_model('model_scripts/richness_2segment_mixedmodel.stan')
 mod_3seg_mixed <- stan_model('model_scripts/richness_3segment_mixedmodel.stan')
 
+# Note: warnings about Rhat = NA are an artifact of how the indicator variable is defined. You can ignore them.
+
 fit_2seg_linear_all <- sampling(mod_2seg_linear, data = dat_all, chains = 3, iter = 5000, warmup = 4000, seed = 222)
 fit_3seg_linear_all <- sampling(mod_3seg_linear, data = dat_all, chains = 3, iter = 5000, warmup = 4000, seed = 111)
 
@@ -121,16 +123,64 @@ fit_3seg_mixed_all_light <- sampling(mod_3seg_mixed, data = dat_fg_light, chains
 
 # Extract output ----------------------------------------------------------
 
+# Functions for fitted values
+# ===========================
+
+twoseg_log <- function(x, alpha, beta, tau) {
+  x2 <- ifelse(log10(x) < tau, 0, 1)
+  10 ^ (alpha + beta[1] * log10(x) + beta[2] * (log10(x) - tau) * x2)
+}
+
+threeseg_log <- function(x, alpha, beta, tau_low, tau_high) {
+  x2a <- ifelse(log10(x) < tau_low, 0, 1)
+  x2b <- ifelse(log10(x) < tau_high, 0, 1)
+  10 ^ (alpha + beta[1] * log10(x) + beta[2] * (log10(x) - tau_low) * x2a + beta[3] * (log10(x) - tau_high) * x2b)
+}
+
 # Only extract from three segment model.
 # Extract from the all-tree linear model, and the by-group mixed model, for both diameter and light/area.
 
 # Parameter values
+# ================
 
-params_3seg_diam <- param_values(fit_3seg_mixed_all, )
+# Create vector with parameter names to extract
+# In linear model, beta is a 3 element vector.
+# Only get the group level coefficients from the mixed model.
+par_names_3seg_linear <- c('alpha', 'beta', 'tau_low', 'tau_high')
+par_names_3seg_mixed <- c('coef_alpha', 'coef_beta_low', 'coef_beta_mid', 'coef_beta_high', 'coef_tau_low', 'coef_tau_high')
+df_col_names <- c('parameter', 'mean', 'se_mean', 'sd', 'q025', 'q25', 'q50', 'q75', 'q975', 'n_eff', 'Rhat')
+
+params_3seg_diam_all <- data.frame(parameter = c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'),
+                                   summary(fit_3seg_linear_all, pars = par_names_3seg_linear)[[1]]) %>%
+  setNames(df_col_names)
+
+# FIXME insert more extraction here
+
 
 # Fitted and predicted values
+# ===========================
+
+
+
 # Fitted slopes
+# =============
+
 # Bayesian R-squared and correction factor for log-log regression plot
+# ====================================================================
+
+corr_factor <- function(y, y_fit, n_pars) {
+  y_fit <- do.call(cbind, y_fit)
+  # Get residuals by subtracting log y from linear predictor
+  resids <- -1 * sweep(log(y_fit), 1, log(y))
+  
+  # Sum of squared residuals
+  ssq_resid <- apply(resids^2, 2, sum)
+  # Standard error of estimates
+  sse <- (ssq_resid / (length(y) - n_pars))^0.5
+  # Correction factors
+  exp((sse^2)/2)
+}
+
 
 # Create clean summary tables ---------------------------------------------
 
