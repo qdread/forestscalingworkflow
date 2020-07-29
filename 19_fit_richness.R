@@ -7,7 +7,7 @@
 # 3. Extract output
 #   - parameter values
 #   - fitted values
-#   - Bayesian R-squared
+#   - correction factor for log log regression plots
 # 4. Create clean summary tables
 # 5. Create plotting data CSVs
 
@@ -308,10 +308,60 @@ cf_mixed_light <- linpred_mixed_light %>%
          cf = exp((see^2)/2))
   
 # Extract quantiles of correction factor
+cfquant_linear_diam <- as.data.frame(t(quantile(cf_linear_diam$cf, probs = qprobs))) %>%
+  setNames(df_col_names)
+cfquant_linear_light <- as.data.frame(t(quantile(cf_linear_light$cf, probs = qprobs))) %>%
+  setNames(df_col_names)
 
+cfquant_mixed_diam <- as.data.frame(t(quantile(cf_mixed_diam$cf, probs = qprobs))) %>%
+  setNames(df_col_names)
+cfquant_mixed_light <- as.data.frame(t(quantile(cf_mixed_light$cf, probs = qprobs))) %>%
+  setNames(df_col_names)
 
 # Write the extracted output to files
 # ===================================
+
+# Write parameters and CI (transform taus to regular units, not log units)
+params_3seg_diam <- params_3seg_diam %>%
+  mutate(fg = factor(fg, levels = c('all', 1:5), labels = c('all', 'fast', 'large pioneer', 'slow', 'small breeder', 'medium')),
+         parameter = factor(parameter, levels = c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))) %>%
+  arrange(fg, parameter) %>%
+  mutate_at(vars('mean', starts_with('q')), ~ if_else(grepl('tau', parameter), 10 ^ ., .)) %>%
+  mutate(year = 1995, model = '3 segment') %>%
+  select(year, model, everything())
+params_3seg_light <- params_3seg_light %>%
+  mutate(fg = factor(fg, levels = c('all', 1:5), labels = c('all', 'fast', 'large pioneer', 'slow', 'small breeder', 'medium')),
+         parameter = factor(parameter, levels = c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))) %>%
+  arrange(fg, parameter) %>%
+  mutate_at(vars('mean', starts_with('q')), ~ if_else(grepl('tau', parameter), 10 ^ ., .)) %>%
+  mutate(year = 1995, model = '3 segment') %>%
+  select(year, model, everything())
+
+write_csv(params_3seg_diam, 'data/data_piecewisefits/richnessbydiameter_paramci_by_fg.csv')
+write_csv(params_3seg_light, 'data/data_piecewisefits/richnessbylightarea_paramci_by_fg.csv')
+
+# Write fitted values and CI
+fittedquant_diam <- data.frame(
+  year = 1995,
+  model = '3 segment',
+  bind_rows(data.frame(fg = 'all', fittedquant_linear_diam), 
+                              fittedquant_mixed_diam %>% ungroup %>% mutate(fg = paste0('fg', fg))))
+fittedquant_light <- data.frame(
+  year = 1995,
+  model = '3 segment',
+  bind_rows(data.frame(fg = 'all', fittedquant_linear_light), 
+            fittedquant_mixed_light %>% ungroup %>% mutate(fg = paste0('fg', fg)))) %>%
+  rename(light_area = lightarea)
+
+write_csv(fittedquant_diam, 'data/data_piecewisefits/richnessbydiameter_ci_by_fg.csv')
+write_csv(fittedquant_light, 'data/data_piecewisefits/richnessbylightarea_ci_by_fg.csv')
+
+# Write correction factors
+cfquant_diam <- data.frame(fg = c('all', 'by_fg'), bind_rows(cfquant_linear_diam, cfquant_mixed_diam))
+cfquant_light <- data.frame(fg = c('all', 'by_fg'), bind_rows(cfquant_linear_light, cfquant_mixed_light))
+
+write_csv(cfquant_diam, 'data/data_piecewisefits/richnessbydiameter_cf_by_fg.csv')
+write_csv(cfquant_light, 'data/data_piecewisefits/richnessbylightarea_cf_by_fg.csv')
 
 # Create clean summary tables ---------------------------------------------
 
