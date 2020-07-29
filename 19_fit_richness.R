@@ -365,8 +365,23 @@ write_csv(cfquant_light, 'data/data_piecewisefits/richnessbylightarea_cf_by_fg.c
 
 # Create clean summary tables ---------------------------------------------
 
-# FIXME put the code here
+# Only need to clean up the parameter tables.
+params_3seg_diam %>%
+  mutate(parameter = factor(parameter, labels = c('intercept', 'slope small trees', 'slope midsize trees', 'slope large trees', 'cutoff small to midsize', 'cutoff midsize to large'))) %>%
+  write_csv('data/clean_summary_tables/clean_parameters_richnessbydiameter.csv')
+params_3seg_light %>%
+  mutate(parameter = factor(parameter, labels = c('intercept', 'slope small trees', 'slope midsize trees', 'slope large trees', 'cutoff small to midsize', 'cutoff midsize to large'))) %>%
+  write_csv('data/clean_summary_tables/clean_parameters_richnessbylightarea.csv')
 
 # Create plotting data ----------------------------------------------------
 
-# FIXME put the code here
+# Observed data
+obs_richnessbydiameter <- data.frame(year = 1995, bind_rows(bin_all, bin_x_fg))
+obs_richnessbylightarea <- data.frame(year = 1995, bind_rows(bin_all_light, bin_x_fg_light))
+
+# Fitted data (the same as the ci data frame.)
+
+write_csv(obs_richnessbydiameter, 'data/data_forplotting/obs_richnessbydiameter.csv')
+write_csv(obs_richnessbylightarea, 'data/data_forplotting/obs_richnessbylightarea.csv')
+write_csv(fittedquant_diam, 'data/data_forplotting/fitted_richnessbydiameter.csv')
+write_csv(fittedquant_light, 'data/data_forplotting/fitted_richnessbylightarea.csv')
