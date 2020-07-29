@@ -6,8 +6,7 @@
 # 2. Load and fit models
 # 3. Extract output
 #   - parameter values
-#   - fitted and predicted values
-#   - fitted slopes
+#   - fitted values
 #   - Bayesian R-squared
 # 4. Create clean summary tables
 # 5. Create plotting data CSVs
@@ -24,8 +23,6 @@ load('data/rawdataobj_alternativecluster.r')
 
 # Load 1995 bin data (to make sure we're using the same bin breaks as other figs)
 load('data/data_binned/bin_object_singleyear.RData')
-
-source('R_functions/model_output_extraction_functions.r')
 
 # Create binned richness data
 
@@ -137,6 +134,10 @@ threeseg_log <- function(x, alpha, beta, tau_low, tau_high) {
   10 ^ (alpha + beta[1] * log10(x) + beta[2] * (log10(x) - tau_low) * x2a + beta[3] * (log10(x) - tau_high) * x2b)
 }
 
+dbh_pred <- exp(seq(log(1), log(315), length.out = 101))
+light_pred <- exp(seq(log(1), log(412), length.out = 101))
+qprobs <- c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975) 
+
 # Only extract from three segment model.
 # Extract from the all-tree linear model, and the by-group mixed model, for both diameter and light/area.
 
@@ -148,43 +149,205 @@ threeseg_log <- function(x, alpha, beta, tau_low, tau_high) {
 # Only get the group level coefficients from the mixed model.
 par_names_3seg_linear <- c('alpha', 'beta', 'tau_low', 'tau_high')
 par_names_3seg_mixed <- c('coef_alpha', 'coef_beta_low', 'coef_beta_mid', 'coef_beta_high', 'coef_tau_low', 'coef_tau_high')
-df_col_names <- c('parameter', 'mean', 'se_mean', 'sd', 'q025', 'q25', 'q50', 'q75', 'q975', 'n_eff', 'Rhat')
+df_col_names <- c('fg', 'parameter', 'mean', 'se_mean', 'sd', 'q025', 'q25', 'q50', 'q75', 'q975', 'n_eff', 'Rhat')
 
-params_3seg_diam_all <- data.frame(parameter = c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'),
+params_3seg_diam_all <- data.frame(fg = 'all',
+                                   parameter = c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'),
                                    summary(fit_3seg_linear_all, pars = par_names_3seg_linear)[[1]]) %>%
   setNames(df_col_names)
+params_3seg_diam_mixed <- data.frame(fg = 1:5,
+                                     parameter = rep(c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'), each = 5),
+                                     summary(fit_3seg_mixed_all, pars = par_names_3seg_mixed)[[1]]) %>%
+  setNames(df_col_names)
+params_3seg_diam <- rbind(params_3seg_diam_all, params_3seg_diam_mixed)
 
-# FIXME insert more extraction here
-
+params_3seg_light_all <- data.frame(fg = 'all',
+                                    parameter = c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'),
+                                   summary(fit_3seg_linear_all_light, pars = par_names_3seg_linear)[[1]]) %>%
+  setNames(df_col_names)
+params_3seg_light_mixed <- data.frame(fg = 1:5,
+                                     parameter = rep(c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'), each = 5),
+                                     summary(fit_3seg_mixed_all_light, pars = par_names_3seg_mixed)[[1]]) %>%
+  setNames(df_col_names)
+params_3seg_light <- rbind(params_3seg_light_all, params_3seg_light_mixed)
 
 # Fitted and predicted values
 # ===========================
 
+# Extract needed parameter estimates from each iteration, to be used for fitted values, fitted slopes, R2, and corr. factor.
+par_draws_linear_diam <- extract(fit_3seg_linear_all, pars = par_names_3seg_linear)
+par_draws_linear_light <- extract(fit_3seg_linear_all_light, pars = par_names_3seg_linear)
+par_draws_mixed_diam <- extract(fit_3seg_mixed_all, pars = par_names_3seg_mixed)
+par_draws_mixed_light <- extract(fit_3seg_mixed_all_light, pars = par_names_3seg_mixed)
+
+# Reshape the parameter draws into data frames
+par_draws_linear_diam <- do.call(cbind, par_draws_linear_diam) %>%
+  as.data.frame %>% setNames(c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))
+par_draws_linear_light <- do.call(cbind, par_draws_linear_light) %>%
+  as.data.frame %>% setNames(c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))
+
+par_draws_mixed_diam <- imap_dfr(par_draws_mixed_diam, ~ data.frame(iter = 1:nrow(.x), parameter = .y, .x)) %>%
+  pivot_longer(-c(iter, parameter), names_to = 'fg') %>%
+  pivot_wider(id_cols = c(iter, fg), names_from = parameter, values_from = value) %>%
+  mutate(fg = as.numeric(substr(fg, 2, 2)))
+par_draws_mixed_light <- imap_dfr(par_draws_mixed_light, ~ data.frame(iter = 1:nrow(.x), parameter = .y, .x)) %>%
+  pivot_longer(-c(iter, parameter), names_to = 'fg') %>%
+  pivot_wider(id_cols = c(iter, fg), names_from = parameter, values_from = value) %>%
+  mutate(fg = as.numeric(substr(fg, 2, 2)))
+
+# Get fitted values for each iteration (and FG)
+fitted_linear_diam <- par_draws_linear_diam %>%
+  mutate(iter = 1:nrow(.)) %>%
+  group_by(iter) %>%
+  group_modify(~ data.frame(x = dbh_pred, y_fit = threeseg_log(x = dbh_pred, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
+fitted_linear_light <- par_draws_linear_light %>%
+  mutate(iter = 1:nrow(.)) %>%
+  group_by(iter) %>%
+  group_modify(~ data.frame(x = light_pred, y_fit = threeseg_log(x = light_pred, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
 
 
-# Fitted slopes
-# =============
+fitted_mixed_diam <- par_draws_mixed_diam %>% 
+  group_by(iter, fg) %>%
+  group_modify(~ data.frame(x = dbh_pred, y_fit = threeseg_log(x = dbh_pred, alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)))
+fitted_mixed_light <- par_draws_mixed_light %>% 
+  group_by(iter, fg) %>%
+  group_modify(~ data.frame(x = light_pred, y_fit = threeseg_log(x = light_pred, alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)))
+
+
+# Get quantiles of the fitted values
+df_col_names <- c('q025', 'q05', 'q25', 'q50', 'q75', 'q95', 'q975')
+
+fittedquant_linear_diam <- fitted_linear_diam %>%
+  group_by(x) %>%
+  group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+
+fittedquant_linear_light <- fitted_linear_light %>%
+  group_by(x) %>%
+  group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
+  setNames(c('lightarea', df_col_names))
+
+fittedquant_mixed_diam <- fitted_mixed_diam %>%
+  group_by(fg, x) %>%
+  group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
+  setNames(c('fg', 'dbh', df_col_names))
+
+fittedquant_mixed_light <- fitted_mixed_light %>%
+  group_by(fg, x) %>%
+  group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
+  setNames(c('fg', 'lightarea', df_col_names))
+
+# FIXME put all the code here
 
 # Bayesian R-squared and correction factor for log-log regression plot
 # ====================================================================
 
-corr_factor <- function(y, y_fit, n_pars) {
-  y_fit <- do.call(cbind, y_fit)
-  # Get residuals by subtracting log y from linear predictor
-  resids <- -1 * sweep(log(y_fit), 1, log(y))
-  
-  # Sum of squared residuals
-  ssq_resid <- apply(resids^2, 2, sum)
-  # Standard error of estimates
-  sse <- (ssq_resid / (length(y) - n_pars))^0.5
-  # Correction factors
-  exp((sse^2)/2)
-}
+# Get fitted values for every data point at every iteration (posterior estimates of linear predictor)
+linpred_linear_diam <- par_draws_linear_diam %>%
+  mutate(iter = 1:nrow(.)) %>%
+  group_by(iter) %>%
+  group_modify(~ data.frame(x = dat_all$x, y = dat_all$y, y_fit = threeseg_log(x = dat_all$x, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
+linpred_linear_light <- par_draws_linear_light %>%
+  mutate(iter = 1:nrow(.)) %>%
+  group_by(iter) %>%
+  group_modify(~ data.frame(x = dat_all_light$x, y = dat_all_light$y, y_fit = threeseg_log(x = dat_all_light$x, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
 
+linpred_mixed_diam <- par_draws_mixed_diam %>% 
+  group_by(iter, fg) %>%
+  group_modify(~ data.frame(x = dat_fg$x[dat_fg$fg == .$fg[1]],
+                            y = dat_fg$y[dat_fg$fg == .$fg[1]],
+                            y_fit = threeseg_log(x =  dat_fg$x[dat_fg$fg == .$fg[1]], alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)),
+               keep = TRUE)
+linpred_mixed_light <- par_draws_mixed_light %>% 
+  group_by(iter, fg) %>%
+  group_modify(~ data.frame(x = dat_fg_light$x[dat_fg_light$fg == .$fg[1]],
+                            y = dat_fg_light$y[dat_fg_light$fg == .$fg[1]],
+                            y_fit = threeseg_log(x =  dat_fg_light$x[dat_fg_light$fg == .$fg[1]], alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)),
+               keep = TRUE)
+
+# Take log of fitted values and get residuals by subtracting log of observed y from log of fitted y
+linpred_linear_diam <- linpred_linear_diam %>%
+  mutate(resid = log(y_fit) - log(y))
+linpred_linear_light <- linpred_linear_light %>%
+  mutate(resid = log(y_fit) - log(y))
+
+linpred_mixed_diam <- linpred_mixed_diam %>%
+  mutate(resid = log(y_fit) - log(y))
+linpred_mixed_light <- linpred_mixed_light %>%
+  mutate(resid = log(y_fit) - log(y))
+
+# Calculate variance of residuals at each iteration, and ratio of predicted variance to residual variance (R2)
+r2_linear_diam <- linpred_linear_diam %>%
+  group_by(iter) %>%
+  summarize(pred_var = var(log(y_fit)),
+            resid_var = var(resid)) %>%
+  mutate(r2 = pred_var / (pred_var + resid_var))
+r2_linear_light <- linpred_linear_light %>%
+  group_by(iter) %>%
+  summarize(pred_var = var(log(y_fit)),
+            resid_var = var(resid)) %>%
+  mutate(r2 = pred_var / (pred_var + resid_var))
+
+r2_mixed_diam <- linpred_mixed_diam %>%
+  group_by(iter) %>%
+  summarize(pred_var = var(log(y_fit)),
+            resid_var = var(resid)) %>%
+  mutate(r2 = pred_var / (pred_var + resid_var))
+r2_mixed_light <- linpred_mixed_light %>%
+  group_by(iter) %>%
+  summarize(pred_var = var(log(y_fit)),
+            resid_var = var(resid)) %>%
+  mutate(r2 = pred_var / (pred_var + resid_var))
+
+# Bias correction factor: take sum of squared residuals
+# Get standard error of estimates, using number of parameters to correct the degrees of freedom
+# Use formula to get correction factor
+
+k_linearmodel <- 7
+k_mixedmodel <- 13
+
+cf_linear_diam <- linpred_linear_diam %>%
+  group_by(iter) %>%
+  summarize(ssq_resid = sum(resid^2),
+            n = n()) %>%
+  mutate(see = (ssq_resid / (n - k_linearmodel))^0.5,
+         cf = exp((see^2)/2))
+cf_linear_light <- linpred_linear_light %>%
+  group_by(iter) %>%
+  summarize(ssq_resid = sum(resid^2),
+            n = n()) %>%
+  mutate(see = (ssq_resid / (n - k_linearmodel))^0.5,
+         cf = exp((see^2)/2))
+
+cf_mixed_diam <- linpred_mixed_diam %>%
+  group_by(iter) %>%
+  summarize(ssq_resid = sum(resid^2),
+            n = n()) %>%
+  mutate(see = (ssq_resid / (n - k_mixedmodel))^0.5,
+         cf = exp((see^2)/2))
+cf_mixed_light <- linpred_mixed_light %>%
+  group_by(iter) %>%
+  summarize(ssq_resid = sum(resid^2),
+            n = n()) %>%
+  mutate(see = (ssq_resid / (n - k_mixedmodel))^0.5,
+         cf = exp((see^2)/2))
+  
+### FIXME fix the formula and add the other 3 models here
+
+
+# Extract quantiles of R2
+r2quant_linear_diam
+
+# Extract quantiles of correction factor
+
+
+# Write the extracted output to files
+# ===================================
 
 # Create clean summary tables ---------------------------------------------
 
+# FIXME put the code here
 
 # Create plotting data ----------------------------------------------------
 
-
+# FIXME put the code here
