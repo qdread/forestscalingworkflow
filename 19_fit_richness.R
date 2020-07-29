@@ -237,10 +237,8 @@ fittedquant_mixed_light <- fitted_mixed_light %>%
   group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
   setNames(c('fg', 'lightarea', df_col_names))
 
-# FIXME put all the code here
-
-# Bayesian R-squared and correction factor for log-log regression plot
-# ====================================================================
+# correction factor for log-log regression plot
+# =============================================
 
 # Get fitted values for every data point at every iteration (posterior estimates of linear predictor)
 linpred_linear_diam <- par_draws_linear_diam %>%
@@ -276,29 +274,6 @@ linpred_mixed_diam <- linpred_mixed_diam %>%
 linpred_mixed_light <- linpred_mixed_light %>%
   mutate(resid = log(y_fit) - log(y))
 
-# Calculate variance of residuals at each iteration, and ratio of predicted variance to residual variance (R2)
-r2_linear_diam <- linpred_linear_diam %>%
-  group_by(iter) %>%
-  summarize(pred_var = var(log(y_fit)),
-            resid_var = var(resid)) %>%
-  mutate(r2 = pred_var / (pred_var + resid_var))
-r2_linear_light <- linpred_linear_light %>%
-  group_by(iter) %>%
-  summarize(pred_var = var(log(y_fit)),
-            resid_var = var(resid)) %>%
-  mutate(r2 = pred_var / (pred_var + resid_var))
-
-r2_mixed_diam <- linpred_mixed_diam %>%
-  group_by(iter) %>%
-  summarize(pred_var = var(log(y_fit)),
-            resid_var = var(resid)) %>%
-  mutate(r2 = pred_var / (pred_var + resid_var))
-r2_mixed_light <- linpred_mixed_light %>%
-  group_by(iter) %>%
-  summarize(pred_var = var(log(y_fit)),
-            resid_var = var(resid)) %>%
-  mutate(r2 = pred_var / (pred_var + resid_var))
-
 # Bias correction factor: take sum of squared residuals
 # Get standard error of estimates, using number of parameters to correct the degrees of freedom
 # Use formula to get correction factor
@@ -332,12 +307,6 @@ cf_mixed_light <- linpred_mixed_light %>%
   mutate(see = (ssq_resid / (n - k_mixedmodel))^0.5,
          cf = exp((see^2)/2))
   
-### FIXME fix the formula and add the other 3 models here
-
-
-# Extract quantiles of R2
-r2quant_linear_diam
-
 # Extract quantiles of correction factor
 
 
