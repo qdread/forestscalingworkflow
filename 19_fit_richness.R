@@ -11,7 +11,7 @@
 # 4. Create clean summary tables
 # 5. Create plotting data CSVs
 # 6. Create fitted values and fitted slopes for the ratio plots as well, output them to CSVs (one for plotting and one clean)
-# 7. Binned abundance versus binned richness values, fit a regression line to them.
+# 7. Binned abundance versus binned richness values, fit a regression line to them (mixed-effects model)
 
 
 # Load data ----------------------------------------------------
@@ -378,8 +378,10 @@ params_3seg_light %>%
 # Create plotting data ----------------------------------------------------
 
 # Observed data
-obs_richnessbydiameter <- data.frame(year = 1995, bind_rows(bin_all, bin_x_fg))
-obs_richnessbylightarea <- data.frame(year = 1995, bind_rows(bin_all_light, bin_x_fg_light))
+obs_richnessbydiameter <- data.frame(year = 1995, bind_rows(bin_all, bin_x_fg)) %>%
+  mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
+obs_richnessbylightarea <- data.frame(year = 1995, bind_rows(bin_all_light, bin_x_fg_light)) %>%
+  mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
 
 # Fitted data (the same as the ci data frame.)
 
@@ -576,3 +578,44 @@ ratioslope_all_clean <- bind_rows(
 )
 
 write_csv(ratioslope_all_clean, 'data/clean_summary_tables/clean_richness_ratio_fitted_slopes.csv')
+
+
+# Abundance vs richness mixed effects model -------------------------------
+
+# For diameter fit.
+# Use brms because it is a straightforward mixed effects model that does not require custom Stan code.
+
+library(brms)
+
+bin_x_fg <- bin_x_fg %>% mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
+bin_x_fg_light <- bin_x_fg_light %>% mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
+
+fit_richxabund_diam <- brm(log_richness ~ log_abundance + (log_abundance|fg),
+                           data = bin_x_fg %>% 
+                             filter(!fg %in% 'unclassified', richness > 0) %>%
+                             mutate(log_richness = log10(richness_by_bin_width),
+                                    log_abundance = log10(abundance_by_bin_width)),
+                           chains = 3, iter = 5000, warmup = 4000, seed = 123)
+
+# Extract coefficients and fitted values
+
+# coefficients (clean up)
+coef_richxabund_diam <- coef(fit_richxabund_diam, probs = qprobs)
+
+params_richxabund_diam <- data.frame(fg = c('fast', 'large pioneer', 'slow', 'small breeder', 'medium'),
+                                     parameter = rep(c('intercept', 'slope'), each = 5),
+                                       rbind(coef_richxabund_diam[[1]][,,1], coef_richxabund_diam[[1]][,,2])) %>%
+  setNames(c('fg', 'parameter', 'mean', 'sd', df_col_names))
+
+predict_dat <- expand_grid(fg = paste0('fg', 1:5), 
+                           log_abundance = seq(-2, 5, length.out = 101))
+
+fitted_richxabund_diam <- predict(fit_richxabund_diam, newdata = predict_dat, transform = function(x) 10^x, probs = qprobs)
+
+fitted_richxabund_diam <- data.frame(abundance_by_bin_width = 10^predict_dat$log_abundance,
+                                     fg = predict_dat$fg,
+                                     fitted_richxabund_diam) %>%
+  setNames(c('abundance_by_bin_width', 'fg', 'mean', 'sd', df_col_names))
+
+write_csv(params_richxabund_diam, 'data/clean_summary_tables/clean_parameters_richnessvsabundance.csv')
+write_csv(fitted_richxabund_diam, 'data/data_forplotting/fitted_richnessvsabundance.csv')
