@@ -10,6 +10,8 @@
 #   - correction factor for log log regression plots
 # 4. Create clean summary tables
 # 5. Create plotting data CSVs
+# 6. Create fitted values and fitted slopes for the ratio plots as well, output them to CSVs (one for plotting and one clean)
+# 7. Binned abundance versus binned richness values, fit a regression line to them.
 
 
 # Load data ----------------------------------------------------
@@ -385,3 +387,192 @@ write_csv(obs_richnessbydiameter, 'data/data_forplotting/obs_richnessbydiameter.
 write_csv(obs_richnessbylightarea, 'data/data_forplotting/obs_richnessbylightarea.csv')
 write_csv(fittedquant_diam, 'data/data_forplotting/fitted_richnessbydiameter.csv')
 write_csv(fittedquant_light, 'data/data_forplotting/fitted_richnessbylightarea.csv')
+
+
+# Ratio trends ------------------------------------------------------------
+
+# For the diameter fits and light fits.
+# We divide the fitted values for fast/slow and pioneer/breeder to get the ratios
+# The two correction factors cancel out in numerator and denominator, so no need to multiply out by it.
+
+ratio_fastslow_diam <- fitted_mixed_diam %>%
+  filter(fg %in% c(1,3)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = y_fit) %>%
+  mutate(ratio = `1`/`3`)
+ratio_pioneerbreeder_diam <- fitted_mixed_diam %>%
+  filter(fg %in% c(2,4)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = y_fit) %>%
+  mutate(ratio = `2`/`4`)
+ratio_fastslow_light <- fitted_mixed_light %>%
+  filter(fg %in% c(1,3)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = y_fit) %>%
+  mutate(ratio = `1`/`3`)
+ratio_pioneerbreeder_light <- fitted_mixed_light %>%
+  filter(fg %in% c(2,4)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = y_fit) %>%
+  mutate(ratio = `2`/`4`)
+
+# Quantiles of ratios
+ratioquant_fastslow_diam <- ratio_fastslow_diam %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$ratio, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+ratioquant_pioneerbreeder_diam <- ratio_pioneerbreeder_diam %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$ratio, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+ratioquant_fastslow_light <- ratio_fastslow_light %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$ratio, probs = qprobs)))) %>%
+  setNames(c('light_area', df_col_names))
+ratioquant_pioneerbreeder_light <- ratio_pioneerbreeder_light %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$ratio, probs = qprobs)))) %>%
+  setNames(c('light_area', df_col_names))
+
+# Fitted slopes of ratios
+log_slope <- function(x, y) (x[-1]/y[-1]) * diff(y)/diff(x)  
+
+fittedslope_mixed_diam <- fitted_mixed_diam %>%
+  group_by(iter, fg) %>%
+  group_modify(~ data.frame(x = exp(midpts(log(.$x))), slope = log_slope(.$x, .$y_fit)))
+fittedslope_mixed_light <- fitted_mixed_light %>%
+  group_by(iter, fg) %>%
+  group_modify(~ data.frame(x = exp(midpts(log(.$x))), slope = log_slope(.$x, .$y_fit)))
+
+ratioslope_fastslow_diam <- fittedslope_mixed_diam %>%
+  filter(fg %in% c(1, 3)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = slope) %>%
+  mutate(slope = `1` - `3`)
+ratioslope_pioneerbreeder_diam <- fittedslope_mixed_diam %>%
+  filter(fg %in% c(2, 4)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = slope) %>%
+  mutate(slope = `2` - `4`)
+ratioslope_fastslow_light <- fittedslope_mixed_light %>%
+  filter(fg %in% c(1, 3)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = slope) %>%
+  mutate(slope = `1` - `3`)
+ratioslope_pioneerbreeder_light <- fittedslope_mixed_light %>%
+  filter(fg %in% c(2, 4)) %>%
+  pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = slope) %>%
+  mutate(slope = `2` - `4`)
+
+# Quantiles of fitted slopes of ratios
+ratioslopequant_fastslow_diam <- ratioslope_fastslow_diam %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$slope, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+ratioslopequant_pioneerbreeder_diam <- ratioslope_pioneerbreeder_diam %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$slope, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+ratioslopequant_fastslow_light <- ratioslope_fastslow_light %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$slope, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+ratioslopequant_pioneerbreeder_light <- ratioslope_pioneerbreeder_light %>%
+  group_by(x) %>%
+  group_modify(~ as.data.frame(t(quantile(.$slope, probs = qprobs)))) %>%
+  setNames(c('dbh', df_col_names))
+
+# Write ratio trends to file
+ratio_diam <- bind_rows(data.frame(ratio = 'fast:slow', ratioquant_fastslow_diam),
+                        data.frame(ratio = 'pioneer:breeder', ratioquant_pioneerbreeder_diam))
+ratio_light <- bind_rows(data.frame(ratio = 'fast:slow', ratioquant_fastslow_light),
+                        data.frame(ratio = 'pioneer:breeder', ratioquant_pioneerbreeder_light))
+
+write_csv(ratio_diam, 'data/data_piecewisefits/ratio_fittedvalues_richnessbydiameter.csv')
+write_csv(ratio_light, 'data/data_piecewisefits/ratio_fittedvalues_richnessbylightarea.csv')
+
+# Also put a copy in the data_forplotting directory
+write_csv(ratio_diam, 'data/data_forplotting/fitted_richnessbydiameter_ratio.csv')
+write_csv(ratio_light, 'data/data_forplotting/fitted_richnessbylightarea_ratio.csv')
+
+# Observed richness bin values
+obs_richness_ratio_diam <- bin_x_fg %>%
+  pivot_wider(id_cols = c(bin, bin_midpoint, bin_min, bin_max), names_from = fg, values_from = c(richness, n_individuals)) %>%
+  mutate(richness_ratio_fastslow = richness_fg1/richness_fg3,
+         richness_ratio_pioneerbreeder = richness_fg2/richness_fg4,
+         lowest_n_fastslow = pmin(n_individuals_fg1, n_individuals_fg3),
+         lowest_rich_fastslow  = pmin(richness_fg1, richness_fg3),
+         lowest_n_pioneerbreeder = pmin(n_individuals_fg2, n_individuals_fg4),
+         lowest_rich_pioneerbreeder = pmin(richness_fg2, richness_fg4)) %>%
+  mutate_if(is.double, ~ if_else(is.finite(.), ., as.numeric(NA)))
+obs_richness_ratio_light <- bin_x_fg_light %>%
+  pivot_wider(id_cols = c(bin, bin_midpoint, bin_min, bin_max), names_from = fg, values_from = c(richness, n_individuals)) %>%
+  mutate(richness_ratio_fastslow = richness_fg1/richness_fg3,
+         richness_ratio_pioneerbreeder = richness_fg2/richness_fg4,
+         lowest_n_fastslow = pmin(n_individuals_fg1, n_individuals_fg3),
+         lowest_rich_fastslow  = pmin(richness_fg1, richness_fg3),
+         lowest_n_pioneerbreeder = pmin(n_individuals_fg2, n_individuals_fg4),
+         lowest_rich_pioneerbreeder = pmin(richness_fg2, richness_fg4)) %>%
+  mutate_if(is.double, ~ if_else(is.finite(.), ., as.numeric(NA)))
+
+write_csv(obs_richness_ratio_diam, 'data/data_forplotting/obs_richnessbydiameter_ratio.csv')
+write_csv(obs_richness_ratio_light, 'data/data_forplotting/obs_richnessbylightarea_ratio.csv')
+
+# Create clean data frame of fitted slope quantiles, with one slope per segment
+# Extract slope at midpoints between cutoffs to get this value
+
+# Get cutoff points
+cutoffs_fastslow_diam <- params_3seg_diam %>%
+  filter(fg %in% c('fast', 'slow'), grepl('tau', parameter)) %>%
+  pull(q50) %>% sort # Two of the cutoffs are almost identical
+cutoffs_pioneerbreeder_diam <- params_3seg_diam %>%
+  filter(fg %in% c('large pioneer', 'small breeder'), grepl('tau', parameter)) %>%
+  pull(q50) %>% sort
+
+cutoffs_fastslow_light <- params_3seg_light %>%
+  filter(fg %in% c('fast', 'slow'), grepl('tau', parameter)) %>%
+  pull(q50) %>% sort
+cutoffs_pioneerbreeder_light <- params_3seg_light %>%
+  filter(fg %in% c('large pioneer', 'small breeder'), grepl('tau', parameter)) %>%
+  pull(q50) %>% sort
+
+
+# Extract fitted slope values as close to the midpoint as possible
+ratioslopesegment_fastslow_diam <- ratioslopequant_fastslow_diam %>%
+  ungroup %>%
+  mutate(segment = cut(dbh, breaks = c(1, cutoffs_fastslow_diam[-1], 285), include.lowest = TRUE)) %>%
+  group_by(segment) %>%
+  filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
+  slice(1) %>%
+  filter(!is.na(segment)) %>%
+  select(-dbh) %>%
+  select(segment, everything())
+ratioslopesegment_pioneerbreeder_diam <- ratioslopequant_pioneerbreeder_diam %>%
+  ungroup %>%
+  mutate(segment = cut(dbh, breaks = c(1, cutoffs_pioneerbreeder_diam, 285), include.lowest = TRUE)) %>%
+  group_by(segment) %>%
+  filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
+  slice(1) %>%
+  filter(!is.na(segment)) %>%
+  select(-dbh) %>%
+  select(segment, everything())
+ratioslopesegment_fastslow_light <- ratioslopequant_fastslow_light %>%
+  ungroup %>%
+  mutate(segment = cut(dbh, breaks = c(1, cutoffs_fastslow_light, 285), include.lowest = TRUE)) %>%
+  group_by(segment) %>%
+  filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
+  slice(1) %>%
+  filter(!is.na(segment)) %>%
+  select(-dbh) %>%
+  select(segment, everything())
+ratioslopesegment_pioneerbreeder_light <- ratioslopequant_pioneerbreeder_light %>%
+  ungroup %>%
+  mutate(segment = cut(dbh, breaks = c(1, cutoffs_pioneerbreeder_light, 285), include.lowest = TRUE)) %>%
+  group_by(segment) %>%
+  filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
+  slice(1) %>%
+  filter(!is.na(segment)) %>%
+  select(-dbh) %>%
+  select(segment, everything())
+
+ratioslope_all_clean <- bind_rows(
+  data.frame(ratio = 'fast:slow', scaling_variable = 'diameter', ratioslopesegment_fastslow_diam),
+  data.frame(ratio = 'pioneer:breeder', scaling_variable = 'diameter', ratioslopesegment_pioneerbreeder_diam),
+  data.frame(ratio = 'fast:slow', scaling_variable = 'light per area', ratioslopesegment_fastslow_light),
+  data.frame(ratio = 'pioneer:breeder', scaling_variable = 'light per area', ratioslopesegment_pioneerbreeder_light),
+)
+
+write_csv(ratioslope_all_clean, 'data/clean_summary_tables/clean_richness_ratio_fitted_slopes.csv')
