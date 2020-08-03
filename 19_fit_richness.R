@@ -595,27 +595,34 @@ fit_richxabund_diam <- brm(log_richness ~ log_abundance + (log_abundance|fg),
                              filter(!fg %in% 'unclassified', richness > 0) %>%
                              mutate(log_richness = log10(richness_by_bin_width),
                                     log_abundance = log10(abundance_by_bin_width)),
-                           chains = 3, iter = 5000, warmup = 4000, seed = 123)
+                           chains = 3, iter = 10000, warmup = 9000, seed = 123)
 
 # Extract coefficients and fitted values
+# Use global mean and intercept (fixef) to get fitted line for all trees.
 
 # coefficients (clean up)
 coef_richxabund_diam <- coef(fit_richxabund_diam, probs = qprobs)
+fixef_richxabund_diam <- fixef(fit_richxabund_diam, probs = qprobs)
 
-params_richxabund_diam <- data.frame(fg = c('fast', 'large pioneer', 'slow', 'small breeder', 'medium'),
-                                     parameter = rep(c('intercept', 'slope'), each = 5),
-                                       rbind(coef_richxabund_diam[[1]][,,1], coef_richxabund_diam[[1]][,,2])) %>%
+params_richxabund_diam <- data.frame(fg = c('all', 'fast', 'large pioneer', 'slow', 'small breeder', 'medium'),
+                                     parameter = rep(c('intercept', 'slope'), each = 6),
+                                       rbind(fixef_richxabund_diam[1,],
+                                             coef_richxabund_diam[[1]][,,1], 
+                                             fixef_richxabund_diam[2,],
+                                             coef_richxabund_diam[[1]][,,2])) %>%
   setNames(c('fg', 'parameter', 'mean', 'sd', df_col_names))
 
-predict_dat <- expand_grid(fg = paste0('fg', 1:5), 
+predict_dat <- expand_grid(fg = c(NA, paste0('fg', 1:5)), 
                            log_abundance = seq(-2, 5, length.out = 101))
+
 
 fitted_richxabund_diam <- predict(fit_richxabund_diam, newdata = predict_dat, transform = function(x) 10^x, probs = qprobs)
 
 fitted_richxabund_diam <- data.frame(abundance_by_bin_width = 10^predict_dat$log_abundance,
                                      fg = predict_dat$fg,
                                      fitted_richxabund_diam) %>%
-  setNames(c('abundance_by_bin_width', 'fg', 'mean', 'sd', df_col_names))
+  setNames(c('abundance_by_bin_width', 'fg', 'mean', 'sd', df_col_names)) %>%
+  mutate(fg = if_else(is.na(fg), 'all', fg))
 
 write_csv(params_richxabund_diam, 'data/clean_summary_tables/clean_parameters_richnessvsabundance.csv')
 write_csv(fitted_richxabund_diam, 'data/data_forplotting/fitted_richnessvsabundance.csv')
