@@ -613,7 +613,7 @@ params_richxabund_diam <- data.frame(fg = c('all', 'fast', 'large pioneer', 'slo
   setNames(c('fg', 'parameter', 'mean', 'sd', df_col_names))
 
 predict_dat <- expand_grid(fg = c(NA, paste0('fg', 1:5)), 
-                           log_abundance = seq(-2, 5, length.out = 101))
+                           log_abundance = seq(-2, 5, length.out = 500))
 
 
 fitted_richxabund_diam <- predict(fit_richxabund_diam, newdata = predict_dat, transform = function(x) 10^x, probs = qprobs)
