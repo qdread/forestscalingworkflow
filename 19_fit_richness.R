@@ -616,12 +616,13 @@ predict_dat <- expand_grid(fg = c(NA, paste0('fg', 1:5)),
                            log_abundance = seq(-2, 5, length.out = 500))
 
 
-fitted_richxabund_diam <- predict(fit_richxabund_diam, newdata = predict_dat, transform = function(x) 10^x, probs = qprobs)
+fittedraw_richxabund_diam <- fitted(fit_richxabund_diam, newdata = predict_dat, summary = FALSE)
+fittedquant_richxabund_diam <- apply(10^fittedraw_richxabund_diam, 2, quantile, probs = qprobs)
 
 fitted_richxabund_diam <- data.frame(abundance_by_bin_width = 10^predict_dat$log_abundance,
                                      fg = predict_dat$fg,
-                                     fitted_richxabund_diam) %>%
-  setNames(c('abundance_by_bin_width', 'fg', 'mean', 'sd', df_col_names)) %>%
+                                     t(fittedquant_richxabund_diam)) %>%
+  setNames(c('abundance_by_bin_width', 'fg', df_col_names)) %>%
   mutate(fg = if_else(is.na(fg), 'all', fg))
 
 write_csv(params_richxabund_diam, 'data/clean_summary_tables/clean_parameters_richnessvsabundance.csv')
