@@ -258,8 +258,67 @@ fitted_totalvol <- fitted_totalvol %>%
 
 write.csv(fitted_totalvol, file.path(fp_out, 'fitted_totalvol.csv'), row.names = FALSE)
 
+## Light captured
+ci_df <- read.csv('finalcsvs/lightcaptured_piecewise_ci_by_fg.csv', stringsAsFactors = FALSE)
+area_core <- 42.84
 
-##  FIXME Here include the new total light captured and total leaf area predicted and fitted value extraction.
+cf_totallightcaptured <- read_csv('finalcsvs/lightcaptured_piecewise_cf_by_fg.csv') %>% 
+  select(prod_model, fg, q50) %>% 
+  rename(corr_factor = q50) %>%
+  mutate(fg = if_else(fg == 'alltree', 'all', fg))
+
+ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
+
+fitted_indivlightcaptured <- ci_df %>%
+  filter(variable == 'light_captured_fitted') %>%
+  select(-variable)
+
+fitted_totallightcaptured <- ci_df %>%
+  filter(variable == 'total_light_captured_fitted') %>%
+  select(-variable) 
+
+pred_indivlightcaptured <- ci_df %>%
+  filter(variable == 'light_captured') %>%
+  select(-variable)
+
+pred_totallightcaptured <- ci_df %>%
+  filter(variable == 'total_light_captured') %>%
+  select(-variable) 
+
+fitted_totallightcaptured <- fitted_totallightcaptured %>%
+  left_join(cf_totallightcaptured) %>%
+  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
+
+pred_totallightcaptured <- pred_totallightcaptured %>%
+  left_join(cf_totallightcaptured) %>%
+  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
+
+
+write.csv(pred_indivlightcaptured, file.path(fp_out, 'pred_indivlightcaptured.csv'), row.names = FALSE)
+write.csv(pred_totallightcaptured, file.path(fp_out, 'pred_totallightcaptured.csv'), row.names = FALSE)
+write.csv(fitted_indivlightcaptured, file.path(fp_out, 'fitted_indivlightcaptured.csv'), row.names = FALSE)
+write.csv(fitted_totallightcaptured, file.path(fp_out, 'fitted_totallightcaptured.csv'), row.names = FALSE)
+
+## Leaf area
+ci_df <- read.csv('finalcsvs/leafarea_piecewise_ci_by_fg.csv', stringsAsFactors = FALSE)
+area_core <- 42.84
+
+ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
+
+cf_leafarea <- read_csv('finalcsvs/leafarea_piecewise_cf_by_fg.csv') %>% 
+  select(prod_model, fg, q50) %>% 
+  rename(corr_factor = q50) %>%
+  mutate(fg = if_else(fg == 'alltree', 'all', fg))
+
+fitted_totalleafarea <- ci_df %>%
+  filter(variable == 'total_leaf_area_fitted') %>%
+  select(-variable) 
+
+fitted_totalleafarea <- fitted_totalleafarea %>%
+  left_join(cf_leafarea) %>%
+  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
+
+write.csv(fitted_totalleafarea, file.path(fp_out, 'fitted_totalleafarea.csv'), row.names = FALSE)
 
 # Data for growth per area vs light per area ------------------------------
 
