@@ -71,7 +71,7 @@ iwalk(fgs, ~ create_rdump(fgdat[[.y]][[3]] %>% filter(!recruit), 'dbh_corr' , 'd
 ### light per area ~ growth per area scalings
 
 dat95 <- alltree_light_95 %>%
-  select(dbh_corr, production, light_received, light_captured, crownarea, crownvolume, fg, recruit) %>%
+  select(dbh_corr, production, light_received, light_captured, crownarea, crownvolume, leaf_area, fg, recruit) %>%
   mutate(production_area = production/crownarea, light_area = light_received/crownarea) %>%
   mutate(fg = if_else(is.na(fg), 'unclassified', paste0('fg', fg)))
   
