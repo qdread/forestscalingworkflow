@@ -172,8 +172,10 @@ for (i in 2:3) {
            crownvolume = (2/3) * crownarea * crowndepth, # Half-ellipsoid
            light_received = light * crownarea * insol_bci,
            fraction_light_captured = pct_light_captured(depth = 10^lai_coefs[1] * crowndepth^lai_coefs[2], k = overall_k),
+           light_captured = light_received * fraction_light_captured,
            light_received_byarea = light * insol_bci,
-           light_received_byvolume = light * fraction_light_captured * crownarea * insol_bci / crownvolume)
+           light_received_byvolume = light * fraction_light_captured * crownarea * insol_bci / crownvolume,
+           leaf_area = crownarea * 10^lai_coefs[1] * crowndepth^lai_coefs[2])
 
 }
 
