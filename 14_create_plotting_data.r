@@ -270,19 +270,19 @@ cf_totallightcaptured <- read_csv('finalcsvs/lightcaptured_piecewise_cf_by_fg.cs
 ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
 
 fitted_indivlightcaptured <- ci_df %>%
-  filter(variable == 'light_captured_fitted') %>%
+  filter(variable == 'captured_light_fitted') %>%
   select(-variable)
 
 fitted_totallightcaptured <- ci_df %>%
-  filter(variable == 'total_light_captured_fitted') %>%
+  filter(variable == 'total_captured_light_fitted') %>%
   select(-variable) 
 
 pred_indivlightcaptured <- ci_df %>%
-  filter(variable == 'light_captured') %>%
+  filter(variable == 'captured_light') %>%
   select(-variable)
 
 pred_totallightcaptured <- ci_df %>%
-  filter(variable == 'total_light_captured') %>%
+  filter(variable == 'total_captured_light') %>%
   select(-variable) 
 
 fitted_totallightcaptured <- fitted_totallightcaptured %>%
