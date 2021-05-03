@@ -489,8 +489,8 @@ unscaledlightcapturedbydbhcloudbin_all <- alltree_light_95 %>%
   group_by(dbh_bin) %>%
   group_modify(~ light_bin_stats(.$light_captured))
 
-unscaledlightcapturedbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightbydbhcloudbin_all, stringsAsFactors = FALSE) %>%
-  rbind(as.data.frame(unscaledlightbydbhcloudbin_fg)) %>%
+unscaledlightcapturedbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightcapturedbydbhcloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(unscaledlightcapturedbydbhcloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
 write.csv(lightperareacloudbin_fg, file.path(fp_out, 'lightperareacloudbin_fg.csv'), row.names = FALSE)

@@ -297,7 +297,7 @@ r2s <- do.call(rbind, map(fit_info_list[idx_p], 'r2s'))
 r2s <- cbind(prod_df, r2s)
 r2s$variable <- 'captured light individual'
 
-write.csv(r2s, file = 'finalcsvs/light_piecewise_r2_by_fg.csv', row.names = FALSE)
+write.csv(r2s, file = 'finalcsvs/lightcaptured_piecewise_r2_by_fg.csv', row.names = FALSE)
 
 # Combine bias correction factors into single data frame.
 # -------------------------------------------------------

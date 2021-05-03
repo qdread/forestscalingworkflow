@@ -161,7 +161,7 @@ sbatch --export=scaling=leafareascaling,guild=fg2,year=1995,model=production2,NS
 sbatch --export=scaling=leafareascaling,guild=fg3,year=1995,model=production2,NS=1000,NW=5000,seed=33913 --time=7-00:00:00 --job-name=la2_3 fitpiecewise.sh
 sbatch --export=scaling=leafareascaling,guild=fg4,year=1995,model=production2,NS=1000,NW=5000,seed=33914 --time=7-00:00:00 --job-name=la2_4 fitpiecewise.sh
 sbatch --export=scaling=leafareascaling,guild=fg5,year=1995,model=production2,NS=1000,NW=5000,seed=33915 --time=4:00:00 --job-name=la2_5 fitpiecewise.sh
-sbatch --export=scaling=leafareascaling,guild=unclassified,year=1995,model=production2,NS=1000,NW=5000,seed=33916 --time=7-00:00:00 --job-name=la2_u fitpiecewise.sh
+sbatch --export=scaling=leafareascaling,guild=unclassified,year=1995,model=production2,NS=1000,NW=5000,seed=55916 --time=7-00:00:00 --job-name=la2_u fitpiecewise.sh
 sbatch --export=scaling=leafareascaling,guild=alltree,year=1995,model=production2,NS=1000,NW=5000,seed=33917 --time=7-00:00:00 --job-name=la2_a fitpiecewise.sh
 
 # Individual power laws: DIAMETER (x) AND CAPTURED LIGHT ENERGY (y)
@@ -181,11 +181,11 @@ sbatch --export=scaling=lightcapturedscaling,guild=alltree,year=1995,model=produ
 
 sbatch --export=scaling=lightcapturedscaling,guild=fg1,year=1995,model=production2,NS=1000,NW=5000,seed=22111 --time=4:00:00 --job-name=lc2_1 fitpiecewise.sh
 sbatch --export=scaling=lightcapturedscaling,guild=fg2,year=1995,model=production2,NS=1000,NW=5000,seed=22112 --time=4:00:00 --job-name=lc2_2 fitpiecewise.sh
-sbatch --export=scaling=lightcapturedscaling,guild=fg3,year=1995,model=production2,NS=1000,NW=5000,seed=22113 --time=7-00:00:00 --job-name=lc2_3 fitpiecewise.sh
+sbatch --export=scaling=lightcapturedscaling,guild=fg3,year=1995,model=production2,NS=1000,NW=5000,seed=66113 --time=7-00:00:00 --job-name=lc2_3 fitpiecewise.sh
 sbatch --export=scaling=lightcapturedscaling,guild=fg4,year=1995,model=production2,NS=1000,NW=5000,seed=22114 --time=7-00:00:00 --job-name=lc2_4 fitpiecewise.sh
 sbatch --export=scaling=lightcapturedscaling,guild=fg5,year=1995,model=production2,NS=1000,NW=5000,seed=22115 --time=4:00:00 --job-name=lc2_5 fitpiecewise.sh
 sbatch --export=scaling=lightcapturedscaling,guild=unclassified,year=1995,model=production2,NS=1000,NW=5000,seed=22116 --time=4:00:00 --job-name=lc2_u fitpiecewise.sh
-sbatch --export=scaling=lightcapturedscaling,guild=alltree,year=1995,model=production2,NS=1000,NW=5000,seed=22117 --time=7-00:00:00 --job-name=lc2_a fitpiecewise.sh
+sbatch --export=scaling=lightcapturedscaling,guild=alltree,year=1995,model=production2,NS=1000,NW=5000,seed=66117 --time=7-00:00:00 --job-name=lc2_a fitpiecewise.sh
 
 # All groups together in multilevel model: LIGHT PER AREA (x) and MORTALITY (y)
 # =============================================================================

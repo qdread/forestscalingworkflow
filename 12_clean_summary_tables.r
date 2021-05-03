@@ -236,7 +236,7 @@ indivlightcaptured_param_df <- params %>%
   filter(!fg %in% 'unclassified')
 
 
-write.csv(indivcapturedlight_param_df, file.path(fp_out, 'clean_parameters_individuallightcaptured.csv'), row.names = FALSE)
+write.csv(indivlightcaptured_param_df, file.path(fp_out, 'clean_parameters_individuallightcaptured.csv'), row.names = FALSE)
 
 # Clean output of r-squared for production fits
 r2df <- read.csv('finalcsvs/lightcaptured_piecewise_r2_by_fg.csv', stringsAsFactors = FALSE)
