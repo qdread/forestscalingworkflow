@@ -57,9 +57,9 @@ get_lue_info <- function(fg, year = 1995, n_chains = 3) {
   # Quotient of fitted values is light use efficiency
   lue_fitted <- prod_fitted / lightcaptured_fitted
   
-  lue_fitted_quant <- apply(lue_fitted, 1, quantile, probs = qprobs, na.rm = TRUE)
+  lue_fitted_quant <- apply(lue_fitted, 2, quantile, probs = qprobs, na.rm = TRUE)
   
-  lue_fitted_quant <- data.frame(dbh = dbh_pred[-1],
+  lue_fitted_quant <- data.frame(dbh = dbh_pred,
                                  variable = 'light use efficiency',
                                  lue_fitted_quant)
   
