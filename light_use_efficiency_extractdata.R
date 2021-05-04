@@ -85,6 +85,8 @@ corr_factor <- function(y, y_fit, n_pars) {
 
 # Execute function for each FG ----------------------
 
+library(purrr)
+
 fgs <- c('alltree', paste0('fg', 1:5))
 dbh_pred <- exp(seq(log(1), log(315), length.out = 101))
 
