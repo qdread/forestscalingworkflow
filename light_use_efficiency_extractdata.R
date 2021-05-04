@@ -61,7 +61,7 @@ get_lue_info <- function(fg, year = 1995, n_chains = 3) {
   
   lue_fitted_quant <- data.frame(dbh = dbh_pred,
                                  variable = 'light use efficiency',
-                                 lue_fitted_quant)
+                                 t(lue_fitted_quant))
   
   names(lue_fitted_quant) <- c('dbh', 'variable', 'q025', 'q05', 'q25', 'q50', 'q75', 'q95', 'q975')
   
