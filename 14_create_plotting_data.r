@@ -8,16 +8,16 @@
 library(tidyverse)
 library(forestscaling)
 
-fp_out <- 'data/data_forplotting'
+fp_out <- 'ForestLight/data/data_forplotting'
 
 years <- seq(1990, 2010, 5)
 fg_names <- c("fg1", "fg2", "fg3", "fg4", "fg5", "unclassified")
 
 # Load all the by-year binned data.
-load('data/data_binned/bin_object_singleyear.RData')
+load('ForestLight/data/data_binned/bin_object_singleyear.RData')
 
 # Load raw data
-load('data/rawdataobj_withimputedproduction.RData')
+load('ForestLight/data/rawdataobj_withimputedproduction.RData')
 
 binedgedata <- densitybin_byyear %>% filter(fg == 'all', year == 1995) 
 area_core <- 42.84
@@ -465,6 +465,23 @@ lightpervolcloudbin_fg <- data.frame(fg = 'all', lightpervolcloudbin_all, string
   rbind(as.data.frame(lightpervolcloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
+# Light per leaf area, added 03 June 2021
+alltree_light_95 <- alltree_light_95 %>% mutate(light_received_byleafarea = light_captured / leaf_area)
+
+lightperleafareacloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(fg, dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_received_byleafarea))
+
+lightperleafareacloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_received_byleafarea))
+
+lightperleafareacloudbin_fg <- data.frame(fg = 'all', lightperleafareacloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(lightperleafareacloudbin_fg)) %>%
+  mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
+
 unscaledlightbydbhcloudbin_fg <- alltree_light_95 %>%
   mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(fg, dbh_bin) %>%
@@ -495,6 +512,7 @@ unscaledlightcapturedbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightcap
 
 write.csv(lightperareacloudbin_fg, file.path(fp_out, 'lightperareacloudbin_fg.csv'), row.names = FALSE)
 write.csv(lightpervolcloudbin_fg, file.path(fp_out, 'lightpervolcloudbin_fg.csv'), row.names = FALSE)
+write.csv(lightperleafareacloudbin_fg, file.path(fp_out, 'lightperleafareacloudbin_fg.csv'), row.names = FALSE)
 write.csv(unscaledlightbydbhcloudbin_fg, file.path(fp_out, 'unscaledlightbydbhcloudbin_fg.csv'), row.names = FALSE)
 write.csv(unscaledlightcapturedbydbhcloudbin_fg, file.path(fp_out, 'unscaledlightcapturedbydbhcloudbin_fg.csv'), row.names = FALSE)
 
