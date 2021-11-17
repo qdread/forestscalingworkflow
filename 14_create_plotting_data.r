@@ -32,6 +32,7 @@ totallightbins_fg <- alltree_light_95 %>%
   ungroup %>%
   rbind(data.frame(fg = 'all', totallightbins_all)) %>%
   mutate(bin_value = bin_value / area_core, year = 1995)
+
 totalvolbins_fg <- alltree_light_95 %>%
   mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
   group_by(fg) %>%
