@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# Symlinks
+finalcsvs
+clean_summary_tables
+ForestLight

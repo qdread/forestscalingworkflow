@@ -71,7 +71,7 @@ iwalk(fgs, ~ create_rdump(fgdat[[.y]][[3]] %>% filter(!recruit), 'dbh_corr' , 'd
 ### light per area ~ growth per area scalings
 
 dat95 <- alltree_light_95 %>%
-  select(dbh_corr, production, light_received, crownarea, crownvolume, fg, recruit) %>%
+  select(dbh_corr, production, light_received, light_captured, crownarea, crownvolume, leaf_area, fg, recruit) %>%
   mutate(production_area = production/crownarea, light_area = light_received/crownarea) %>%
   mutate(fg = if_else(is.na(fg), 'unclassified', paste0('fg', fg)))
   
@@ -89,12 +89,26 @@ dat95 %>%
 	group_by(fg) %>%
 	group_walk(~ create_rdump(as.data.frame(.), 'dbh_corr', 'light_received', file_name = file.path(fpdump, paste0('dump_rawlightscaling_', .y, '_1995.r'))))
 
+### individual captured light ~ diameter scalings (light received * fraction light captured; Added 26 Apr 2021)
+create_rdump(dat95, 'dbh_corr', 'light_captured', file_name = file.path(fpdump, 'dump_lightcapturedscaling_alltree_1995.r'))
+
+dat95 %>%
+  group_by(fg) %>%
+  group_walk(~ create_rdump(as.data.frame(.), 'dbh_corr', 'light_captured', file_name = file.path(fpdump, paste0('dump_lightcapturedscaling_', .y, '_1995.r'))))
+
 ### crown volume ~ diameter scalings
 create_rdump(dat95, 'dbh_corr', 'crownvolume', file_name = file.path(fpdump, 'dump_volumescaling_alltree_1995.r'))
 
 dat95 %>%
 	group_by(fg) %>%
 	group_walk(~ create_rdump(as.data.frame(.), 'dbh_corr', 'crownvolume', file_name = file.path(fpdump, paste0('dump_volumescaling_', .y, '_1995.r'))))
+
+### leaf area ~ diameter scalings
+create_rdump(dat95, 'dbh_corr', 'leaf_area', file_name = file.path(fpdump, 'dump_leafareascaling_alltree_1995.r'))
+
+dat95 %>%
+  group_by(fg) %>%
+  group_walk(~ create_rdump(as.data.frame(.), 'dbh_corr', 'leaf_area', file_name = file.path(fpdump, paste0('dump_leafareascaling_', .y, '_1995.r'))))
 
 ### mortality
 mort_data <- mort %>%

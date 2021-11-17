@@ -237,6 +237,149 @@ cfs$variable <- 'crown volume individual'
 write.csv(cfs, file = 'finalcsvs/volume_piecewise_cf_by_fg.csv', row.names = FALSE)
 
 
+# DENSITY-TOTAL CAPTURED LIGHT SCALINGS
+# ADDED 27 APR 2021
+# =====================================
+
+mod_df <- rbind(prod_df, totalprod_df)
+
+
+fit_info_list <- map(1:nrow(mod_df), function(i) {
+  load(file.path(fp, paste0('lightcapturedpw_info_',mod_df$variable[i],'_',i,'.r')))
+  fit_info
+})
+
+# Extract WAIC and LOOIC for total light from each one.
+# ----------------------------------------------------------------
+
+get_ics <- function(x) {
+  ics <- data.frame(criterion = c('WAIC', 'LOOIC'),
+                    IC_value = c(x$waic['waic','Estimate'], x$loo['looic','Estimate']),
+                    IC_stderr = c(x$waic['waic','SE'], x$loo['looic','SE']))
+  return(ics)
+}
+
+idx <- which(mod_df$variable %in% c('production'))
+fit_ics <- map_dfr(fit_info_list[idx], get_ics)
+fit_ics <- cbind(mod_df[idx,][rep(1:nrow(mod_df[idx,]), each=2),], fit_ics)
+fit_ics$variable <- 'captured light individual'
+write.csv(fit_ics, file = 'finalcsvs/lightcaptured_piecewise_ics_by_fg.csv', row.names = FALSE)
+
+# Combine parameter credible intervals into single data frame.
+# ------------------------------------------------------------
+
+param_cis <- map_dfr(fit_info_list[idx], 'param_cis')
+param_cis$variable <- 'captured light individual'
+
+write.csv(param_cis, file = 'finalcsvs/lightcaptured_piecewise_paramci_by_fg.csv', row.names = FALSE)
+
+# Combine predicted values into single data frame.
+# ------------------------------------------------
+
+pred_values <- map_dfr(fit_info_list, 'pred_interval')
+pred_values$variable <- factor(pred_values$variable, levels = c('production', 'production_fitted', 'total_production', 'total_production_fitted'), labels = c('captured_light', 'captured_light_fitted', 'total_captured_light', 'total_captured_light_fitted'))
+
+write.csv(pred_values, file = 'finalcsvs/lightcaptured_piecewise_ci_by_fg.csv', row.names = FALSE)
+
+# Combine fitted slopes into single data frame.
+# ---------------------------------------------
+
+fitted_slopes <- map_dfr(fit_info_list, 'fitted_slopes')
+fitted_slopes$variable <- factor(fitted_slopes$variable, levels = c('production', 'total_production'), labels = c('captured_light', 'total_captured_light'))
+
+write.csv(fitted_slopes, file = 'finalcsvs/lightcaptured_piecewise_fitted_slopes_by_fg.csv', row.names = FALSE)
+
+# Combine R-squared values into single data frame.
+# ------------------------------------------------
+
+idx_p <- which(mod_df$variable %in% c('production'))
+r2s <- do.call(rbind, map(fit_info_list[idx_p], 'r2s'))
+r2s <- cbind(prod_df, r2s)
+r2s$variable <- 'captured light individual'
+
+write.csv(r2s, file = 'finalcsvs/lightcaptured_piecewise_r2_by_fg.csv', row.names = FALSE)
+
+# Combine bias correction factors into single data frame.
+# -------------------------------------------------------
+
+cfs <- do.call(rbind, map(fit_info_list[idx_p], 'cfs'))
+cfs <- cbind(prod_df, cfs)
+cfs$variable <- 'captured light individual'
+
+write.csv(cfs, file = 'finalcsvs/lightcaptured_piecewise_cf_by_fg.csv', row.names = FALSE)
+
+# DENSITY x TOTAL LEAF AREA SCALING
+# ADDED 27 APR 2021
+# =================================
+
+mod_df <- rbind(prod_df, totalprod_df)
+
+
+fit_info_list <- map(1:nrow(mod_df), function(i) {
+  load(file.path(fp, paste0('leafareapw_info_',mod_df$variable[i],'_',i,'.r')))
+  fit_info
+})
+
+# Extract WAIC and LOOIC for total light from each one.
+# ----------------------------------------------------------------
+
+get_ics <- function(x) {
+  ics <- data.frame(criterion = c('WAIC', 'LOOIC'),
+                    IC_value = c(x$waic['waic','Estimate'], x$loo['looic','Estimate']),
+                    IC_stderr = c(x$waic['waic','SE'], x$loo['looic','SE']))
+  return(ics)
+}
+
+idx <- which(mod_df$variable %in% c('production'))
+fit_ics <- map_dfr(fit_info_list[idx], get_ics)
+fit_ics <- cbind(mod_df[idx,][rep(1:nrow(mod_df[idx,]), each=2),], fit_ics)
+fit_ics$variable <- 'leaf area individual'
+write.csv(fit_ics, file = 'finalcsvs/leafarea_piecewise_ics_by_fg.csv', row.names = FALSE)
+
+# Combine parameter credible intervals into single data frame.
+# ------------------------------------------------------------
+
+param_cis <- map_dfr(fit_info_list[idx], 'param_cis')
+param_cis$variable <- 'leaf area individual'
+
+write.csv(param_cis, file = 'finalcsvs/leafarea_piecewise_paramci_by_fg.csv', row.names = FALSE)
+
+# Combine predicted values into single data frame.
+# ------------------------------------------------
+
+pred_values <- map_dfr(fit_info_list, 'pred_interval')
+pred_values$variable <- factor(pred_values$variable, levels = c('production', 'production_fitted', 'total_production', 'total_production_fitted'), labels = c('leaf_area', 'leaf_area_fitted', 'total_leaf_area', 'total_leaf_area_fitted'))
+
+write.csv(pred_values, file = 'finalcsvs/leafarea_piecewise_ci_by_fg.csv', row.names = FALSE)
+
+# Combine fitted slopes into single data frame.
+# ---------------------------------------------
+
+fitted_slopes <- map_dfr(fit_info_list, 'fitted_slopes')
+fitted_slopes$variable <- factor(fitted_slopes$variable, levels = c('production', 'total_production'), labels = c('leaf_area', 'total_leaf_area'))
+
+write.csv(fitted_slopes, file = 'finalcsvs/leafarea_piecewise_fitted_slopes_by_fg.csv', row.names = FALSE)
+
+# Combine R-squared values into single data frame.
+# ------------------------------------------------
+
+idx_p <- which(mod_df$variable %in% c('production'))
+r2s <- do.call(rbind, map(fit_info_list[idx_p], 'r2s'))
+r2s <- cbind(prod_df, r2s)
+r2s$variable <- 'leaf area individual'
+
+write.csv(r2s, file = 'finalcsvs/leafarea_piecewise_r2_by_fg.csv', row.names = FALSE)
+
+# Combine bias correction factors into single data frame.
+# -------------------------------------------------------
+
+cfs <- do.call(rbind, map(fit_info_list[idx_p], 'cfs'))
+cfs <- cbind(prod_df, cfs)
+cfs$variable <- 'leaf area individual'
+
+write.csv(cfs, file = 'finalcsvs/leafarea_piecewise_cf_by_fg.csv', row.names = FALSE)
+
+
 # GROWTH AS DIAMETER PER TIME SCALINGS
 # ADDED 24 JULY 2019
 # ====================================

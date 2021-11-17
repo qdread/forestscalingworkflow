@@ -8,22 +8,25 @@
 library(tidyverse)
 library(forestscaling)
 
-fp_out <- 'data/data_forplotting'
+fp_out <- 'ForestLight/data/data_forplotting'
 
 years <- seq(1990, 2010, 5)
 fg_names <- c("fg1", "fg2", "fg3", "fg4", "fg5", "unclassified")
 
 # Load all the by-year binned data.
-load('data/data_binned/bin_object_singleyear.RData')
+load('ForestLight/data/data_binned/bin_object_singleyear.RData')
 
 # Load raw data
-load('data/rawdataobj_withimputedproduction.RData')
+load('ForestLight/data/rawdataobj_withimputedproduction.RData')
 
 binedgedata <- densitybin_byyear %>% filter(fg == 'all', year == 1995) 
 area_core <- 42.84
 
+# Light received, crown volume, light captured, and leaf area bins (the latter two added 27 Apr 2021)
 totallightbins_all <- with(alltree_light_95, logbin_setedges(x = dbh_corr, y = light_received, edges = binedgedata))
 totalvolbins_all <- with(alltree_light_95, logbin_setedges(x = dbh_corr, y = crownvolume, edges = binedgedata))
+totallightcapturedbins_all <- with(alltree_light_95, logbin_setedges(x = dbh_corr, y = light_captured, edges = binedgedata))
+totalleafareabins_all <- with(alltree_light_95, logbin_setedges(x = dbh_corr, y = leaf_area, edges = binedgedata))
 
 totallightbins_fg <- alltree_light_95 %>%
   mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
@@ -39,6 +42,20 @@ totalvolbins_fg <- alltree_light_95 %>%
   do(logbin_setedges(x = .$dbh_corr, y = .$crownvolume, edges = binedgedata)) %>%
   ungroup %>%
   rbind(data.frame(fg = 'all', totalvolbins_all)) %>%
+  mutate(bin_value = bin_value / area_core, year = 1995)
+totallightcapturedbins_fg <- alltree_light_95 %>%
+  mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
+  group_by(fg) %>%
+  do(logbin_setedges(x = .$dbh_corr, y = .$light_captured, edges = binedgedata)) %>%
+  ungroup %>%
+  rbind(data.frame(fg = 'all', totallightcapturedbins_all)) %>%
+  mutate(bin_value = bin_value / area_core, year = 1995)
+totalleafareabins_fg <- alltree_light_95 %>%
+  mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
+  group_by(fg) %>%
+  do(logbin_setedges(x = .$dbh_corr, y = .$leaf_area, edges = binedgedata)) %>%
+  ungroup %>%
+  rbind(data.frame(fg = 'all', totalleafareabins_all)) %>%
   mutate(bin_value = bin_value / area_core, year = 1995)
 
 indivlightbins_all <- alltree_light_95 %>%
@@ -61,9 +78,32 @@ indivlightbins_fg <- data.frame(fg = 'all', indivlightbins_all, stringsAsFactors
   mutate(indivlight_bin = as.numeric(as.character(indivlight_bin))) %>%
   rename(bin_midpoint = indivlight_bin)
 
+indivlightcapturedbins_all <- alltree_light_95 %>%
+  mutate(indivlightcaptured_bin = cut(dbh_corr, breaks = c(binedgedata$bin_min[1], binedgedata$bin_max), labels = binedgedata$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(indivlightcaptured_bin) %>%
+  do(c(n = nrow(.), quantile(.$light_captured, c(0.025, 0.25, 0.5, 0.75, 0.975))) %>%
+       t %>% 
+       as.data.frame %>%
+       setNames(c('bin_count', 'q025','q25','q50','q75','q975')))
+indivlightcapturedbins_fg <- alltree_light_95 %>%
+  mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
+  mutate(indivlightcaptured_bin =cut(dbh_corr, breaks = c(binedgedata$bin_min[1], binedgedata$bin_max), labels = binedgedata$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(fg, indivlightcaptured_bin) %>%
+  do(c(n = nrow(.), quantile(.$light_captured, c(0.025, 0.25, 0.5, 0.75, 0.975))) %>%
+       t %>% 
+       as.data.frame %>%
+       setNames(c('bin_count', 'q025','q25','q50','q75','q975')))
+indivlightcapturedbins_fg <- data.frame(fg = 'all', indivlightcapturedbins_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(indivlightcapturedbins_fg)) %>%
+  mutate(indivlightcaptured_bin = as.numeric(as.character(indivlightcaptured_bin))) %>%
+  rename(bin_midpoint = indivlightcaptured_bin)
+
 write.csv(indivlightbins_fg, file.path(fp_out, 'obs_indivlight.csv'), row.names = FALSE)
 write.csv(totallightbins_fg, file.path(fp_out, 'obs_totallight.csv'), row.names = FALSE)
+write.csv(indivlightcapturedbins_fg, file.path(fp_out, 'obs_indivlightcaptured.csv'), row.names = FALSE)
+write.csv(totallightcapturedbins_fg, file.path(fp_out, 'obs_totallightcaptured.csv'), row.names = FALSE)
 write.csv(totalvolbins_fg, file.path(fp_out, 'obs_totalvol.csv'), row.names = FALSE)
+write.csv(totalleafareabins_fg, file.path(fp_out, 'obs_totalleafarea.csv'), row.names = FALSE)
 
 # Observed individual production
 obs_indivprod_df <- map(alltreedat[-1],
@@ -219,6 +259,67 @@ fitted_totalvol <- fitted_totalvol %>%
 
 write.csv(fitted_totalvol, file.path(fp_out, 'fitted_totalvol.csv'), row.names = FALSE)
 
+## Light captured
+ci_df <- read.csv('finalcsvs/lightcaptured_piecewise_ci_by_fg.csv', stringsAsFactors = FALSE)
+area_core <- 42.84
+
+cf_totallightcaptured <- read_csv('finalcsvs/lightcaptured_piecewise_cf_by_fg.csv') %>% 
+  select(prod_model, fg, q50) %>% 
+  rename(corr_factor = q50) %>%
+  mutate(fg = if_else(fg == 'alltree', 'all', fg))
+
+ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
+
+fitted_indivlightcaptured <- ci_df %>%
+  filter(variable == 'captured_light_fitted') %>%
+  select(-variable)
+
+fitted_totallightcaptured <- ci_df %>%
+  filter(variable == 'total_captured_light_fitted') %>%
+  select(-variable) 
+
+pred_indivlightcaptured <- ci_df %>%
+  filter(variable == 'captured_light') %>%
+  select(-variable)
+
+pred_totallightcaptured <- ci_df %>%
+  filter(variable == 'total_captured_light') %>%
+  select(-variable) 
+
+fitted_totallightcaptured <- fitted_totallightcaptured %>%
+  left_join(cf_totallightcaptured) %>%
+  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
+
+pred_totallightcaptured <- pred_totallightcaptured %>%
+  left_join(cf_totallightcaptured) %>%
+  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
+
+
+write.csv(pred_indivlightcaptured, file.path(fp_out, 'pred_indivlightcaptured.csv'), row.names = FALSE)
+write.csv(pred_totallightcaptured, file.path(fp_out, 'pred_totallightcaptured.csv'), row.names = FALSE)
+write.csv(fitted_indivlightcaptured, file.path(fp_out, 'fitted_indivlightcaptured.csv'), row.names = FALSE)
+write.csv(fitted_totallightcaptured, file.path(fp_out, 'fitted_totallightcaptured.csv'), row.names = FALSE)
+
+## Leaf area
+ci_df <- read.csv('finalcsvs/leafarea_piecewise_ci_by_fg.csv', stringsAsFactors = FALSE)
+area_core <- 42.84
+
+ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
+
+cf_leafarea <- read_csv('finalcsvs/leafarea_piecewise_cf_by_fg.csv') %>% 
+  select(prod_model, fg, q50) %>% 
+  rename(corr_factor = q50) %>%
+  mutate(fg = if_else(fg == 'alltree', 'all', fg))
+
+fitted_totalleafarea <- ci_df %>%
+  filter(variable == 'total_leaf_area_fitted') %>%
+  select(-variable) 
+
+fitted_totalleafarea <- fitted_totalleafarea %>%
+  left_join(cf_leafarea) %>%
+  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
+
+write.csv(fitted_totalleafarea, file.path(fp_out, 'fitted_totalleafarea.csv'), row.names = FALSE)
 
 # Data for growth per area vs light per area ------------------------------
 
@@ -365,6 +466,23 @@ lightpervolcloudbin_fg <- data.frame(fg = 'all', lightpervolcloudbin_all, string
   rbind(as.data.frame(lightpervolcloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
+# Light per leaf area, added 03 June 2021
+alltree_light_95 <- alltree_light_95 %>% mutate(light_received_byleafarea = light_captured / leaf_area)
+
+lightperleafareacloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(fg, dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_received_byleafarea))
+
+lightperleafareacloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_received_byleafarea))
+
+lightperleafareacloudbin_fg <- data.frame(fg = 'all', lightperleafareacloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(lightperleafareacloudbin_fg)) %>%
+  mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
+
 unscaledlightbydbhcloudbin_fg <- alltree_light_95 %>%
   mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
   group_by(fg, dbh_bin) %>%
@@ -379,10 +497,25 @@ unscaledlightbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightbydbhcloudb
   rbind(as.data.frame(unscaledlightbydbhcloudbin_fg)) %>%
   mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
 
+unscaledlightcapturedbydbhcloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(fg, dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_captured))
+
+unscaledlightcapturedbydbhcloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_captured))
+
+unscaledlightcapturedbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightcapturedbydbhcloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(unscaledlightcapturedbydbhcloudbin_fg)) %>%
+  mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
+
 write.csv(lightperareacloudbin_fg, file.path(fp_out, 'lightperareacloudbin_fg.csv'), row.names = FALSE)
 write.csv(lightpervolcloudbin_fg, file.path(fp_out, 'lightpervolcloudbin_fg.csv'), row.names = FALSE)
+write.csv(lightperleafareacloudbin_fg, file.path(fp_out, 'lightperleafareacloudbin_fg.csv'), row.names = FALSE)
 write.csv(unscaledlightbydbhcloudbin_fg, file.path(fp_out, 'unscaledlightbydbhcloudbin_fg.csv'), row.names = FALSE)
-
+write.csv(unscaledlightcapturedbydbhcloudbin_fg, file.path(fp_out, 'unscaledlightcapturedbydbhcloudbin_fg.csv'), row.names = FALSE)
 
 # Diameter growth plots ---------------------------------------------------
 
