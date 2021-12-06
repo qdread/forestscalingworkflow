@@ -1,5 +1,7 @@
 # Forest Scaling workflow
 
+[![DOI](https://zenodo.org/badge/234630889.svg)](https://zenodo.org/badge/latestdoi/234630889)
+
 This is a repository containing all data and code necessary to reproduce the analyses in:
 
 Life history scaling and the division of energy in forests. John M. Grady, Quentin D. Read, Sydne Record, Nadja Rüger, Phoebe L. Zarnetske, Anthony I. Dell, Stephen P. Hubbell, Sean T. Michaletz, Brian J. Enquist. 2021. *Ecology Letters*.
