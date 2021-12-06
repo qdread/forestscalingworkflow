@@ -2,6 +2,8 @@
 
 This is a repository containing all data and code necessary to reproduce the analyses in:
 
+Life history scaling and the division of energy in forests. John M. Grady, Quentin D. Read, Sydne Record, Nadja Rüger, Phoebe L. Zarnetske, Anthony I. Dell, Stephen P. Hubbell, Sean T. Michaletz, Brian J. Enquist. 2021. *Ecology Letters*.
+
 (This citation will be updated upon final acceptance of the manuscript.)
 
 ## Contents
