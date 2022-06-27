@@ -7,3 +7,11 @@
 finalcsvs
 clean_summary_tables
 ForestLight
+data/clean_summary_tables
+
+# Prevent versioning of large raw data file
+data/rawdataobj_alternativecluster.r
+
+# Executable files made by Stan
+model_scripts/*.exe
+
