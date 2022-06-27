@@ -215,26 +215,31 @@ get_ratio_fitted <- function(dens_model, prod_model, prod_data, fg_top, fg_botto
   
 }
 
-# Execute function for fast/slow and pioneer/breeder ----------------------
+
+# Execute function for all pairwise ratios --------------------------------
+
+# Modified 27 June 2022: this is now done for all six pairwise combinations of the four named FGs instead of just selected ones.
 
 dbh_pred <- exp(seq(log(1), log(315), length.out = 101))
+fg_pairs <- combn(1:4, 2, simplify = FALSE)
+fg_titles <- c('fast', 'tall', 'slow', 'short')
 
 library(forestscaling)
 library(dplyr)
 library(purrr)
 
 min_n <- read.csv('~/forestlight/stanrdump/min_n.csv')
-n_fastslow <- min_n$n[min_n$fg %in% c('fg1', 'fg3') & min_n$year == 1995]
-n_pioneerbreeder <- min_n$n[min_n$fg %in% c('fg2', 'fg4') & min_n$year == 1995]
 
-# Slopes
-ratioslopes_fastslow <- get_ratio_slopes(dens_model = '3', prod_model = '1', fg_top = 'fg1', fg_bottom = 'fg3', year = 1995, xmin = 1, n = n_fastslow)
-ratioslopes_pioneerbreeder <- get_ratio_slopes(dens_model = '3', prod_model = '1', fg_top = 'fg2', fg_bottom = 'fg4', year = 1995, xmin = 1, n = n_pioneerbreeder)
+# Get slopes and credible intervals
+ratioslopes <- map_dfr(fg_pairs, function(fgs) {
+  fg_names <- paste0('fg', fgs)
+  ns <- min_n$n[min_n$fg %in% fg_names & min_n$year == 1995]
+  slopes <- get_ratio_slopes(dens_model = '3', prod_model = '1', fg_top = fg_names[1], fg_bottom = fg_names[2], year = 1995, xmin = 1, n = ns)
+  data.frame(ratio = paste(fg_titles[fgs], collapse = ':'),
+             slopes)
+})
 
-ratioslopes <- data.frame(ratio = rep(c('fast:slow', 'pioneer:breeder'), c(nrow(ratioslopes_fastslow), nrow(ratioslopes_pioneerbreeder))),
-                          rbind(ratioslopes_fastslow, ratioslopes_pioneerbreeder))
-
-write.csv(ratioslopes, '~/forestlight/finalcsvs/ratio_slope_ci.csv', row.names = FALSE)
+write.csv(ratioslopes, '~/forestlight/finalcsvs/ratio_slope_ci_allpairwise.csv', row.names = FALSE)
 
 # Fitted values
 
@@ -245,10 +250,12 @@ prod_dumps <- map(1:4, function(i) {
 	list(x = x, y = y)
 })
 
-ratiofitted_fastslow <- get_ratio_fitted(dens_model = '3', prod_model = '1', prod_data = prod_dumps[c(1, 3)], fg_top = 'fg1', fg_bottom = 'fg3', year = 1995, xmin = 1, n = n_fastslow)
-ratiofitted_pioneerbreeder <- get_ratio_fitted(dens_model = '3', prod_model = '1', prod_data = prod_dumps[c(2, 4)], fg_top = 'fg2', fg_bottom = 'fg4', year = 1995, xmin = 1, n = n_pioneerbreeder)
+ratiofitted <- map_dfr(fg_pairs, function(fgs) {
+  fg_names <- paste0('fg', fgs)
+  ns <- min_n$n[min_n$fg %in% fg_names & min_n$year == 1995]
+  fittedvals <- get_ratio_fitted(dens_model = '3', prod_model = '1', prod_data = prod_dumps[fgs], fg_top = fg_names[1], fg_bottom = fg_names[2], year = 1995, xmin = 1, n = ns)
+  data.frame(ratio = paste(fg_titles[fgs], collapse = ':'),
+             fittedvals)
+})
 
-ratiofitted <- data.frame(ratio = rep(c('fast:slow', 'pioneer:breeder'), c(nrow(ratiofitted_fastslow), nrow(ratiofitted_pioneerbreeder))),
-                          rbind(ratiofitted_fastslow, ratiofitted_pioneerbreeder))
-
-write.csv(ratiofitted, '~/forestlight/finalcsvs/ratio_fittedvalues.csv', row.names = FALSE)
+write.csv(ratiofitted, '~/forestlight/finalcsvs/ratio_fittedvalues_allpairwise.csv', row.names = FALSE)
