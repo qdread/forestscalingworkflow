@@ -7,7 +7,6 @@
 # Needed data dumps:
 # DBH and biomass production for density-biomass growth scalings
 # DBH and diameter growth rate for density-diameter growth scalings
-# Light per crown area and growth per crown area for growth/area-light/area scalings
 
 # --------- #
 # Load data #
@@ -68,34 +67,6 @@ create_rdump(alltreedat[[3]] %>% filter(!recruit), 'dbh_corr', 'diam_growth_rate
 
 iwalk(fgs, ~ create_rdump(fgdat[[.y]][[3]] %>% filter(!recruit), 'dbh_corr' , 'diam_growth_rate', file_name = file.path(fpdump, paste0('dump_diamgrowthscaling_', .x, '_1995.r'))))
 
-### light per area ~ growth per area scalings
-
-dat95 <- alltree_light_95 %>%
-  select(dbh_corr, production, light_received, light_captured, crownarea, crownvolume, leaf_area, fg, recruit) %>%
-  mutate(production_area = production/crownarea, light_area = light_received/crownarea) %>%
-  mutate(fg = if_else(is.na(fg), 'unclassified', paste0('fg', fg)))
-  
-create_rdump(dat95 %>% filter(!recruit), 'light_area', 'production_area', file_name = file.path(fpdump, 'dump_light_alltree_1995.r'))
-
-dat95 %>%
-  filter(!recruit) %>%
-	group_by(fg) %>%
-	group_walk(~ create_rdump(as.data.frame(.), 'light_area', 'production_area', file_name = file.path(fpdump, paste0('dump_light_', .y, '_1995.r'))))
-	
-### individual incoming light ~ diameter scalings
-create_rdump(dat95, 'dbh_corr', 'light_received', file_name = file.path(fpdump, 'dump_rawlightscaling_alltree_1995.r'))
-
-dat95 %>%
-	group_by(fg) %>%
-	group_walk(~ create_rdump(as.data.frame(.), 'dbh_corr', 'light_received', file_name = file.path(fpdump, paste0('dump_rawlightscaling_', .y, '_1995.r'))))
-
-### individual captured light ~ diameter scalings (light received * fraction light captured; Added 26 Apr 2021)
-create_rdump(dat95, 'dbh_corr', 'light_captured', file_name = file.path(fpdump, 'dump_lightcapturedscaling_alltree_1995.r'))
-
-dat95 %>%
-  group_by(fg) %>%
-  group_walk(~ create_rdump(as.data.frame(.), 'dbh_corr', 'light_captured', file_name = file.path(fpdump, paste0('dump_lightcapturedscaling_', .y, '_1995.r'))))
-
 ### crown volume ~ diameter scalings
 create_rdump(dat95, 'dbh_corr', 'crownvolume', file_name = file.path(fpdump, 'dump_volumescaling_alltree_1995.r'))
 
@@ -139,19 +110,4 @@ valfg <- map2_dfr(fgdat, fgs, function(dat, fg_name) {
 
 min_n <- rbind(valall, valfg)
 write_csv(min_n, file.path(fpdump, 'min_n.csv'))
-
-# Minima, maxima, and number of individuals for 1995 only for trees with light measured
-valall <- data.frame(fg = 'alltree', year = 1995, xmin = with(alltree_light_95, min(dbh_corr)), n = nrow(alltree_light_95), n_not_recruit = sum(!alltree_light_95$recruit))
-valfg <- alltree_light_95 %>%
-  group_by(fg) %>%
-  summarize(xmin = min(dbh_corr),
-            n = n(),
-            n_not_recruit = sum(!recruit))
-
-min_n <- data.frame(fg = c('alltree', 'fg1','fg2','fg3','fg4','fg5','unclassified'),
-                    year = 1995,
-                    xmin = c(valall$xmin, valfg$xmin),
-                    n = c(valall$n, valfg$n))
-
-write_csv(min_n, file.path(fpdump, 'min_n_lighttrees.csv'))
 

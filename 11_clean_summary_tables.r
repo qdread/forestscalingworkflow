@@ -1,6 +1,7 @@
 # Script to clean up all new piecewise output and put in tidy CSVs
 # QDR / Forestlight / 14 June 2019
 
+# Modified 04 October 2022: Remove fits not in current version of manuscript.
 # Modified 26 Feb 2020: add summary table for fitted total production slope across intervals
 # Modified 20 June: add light params and R2s.
 # Modified 10 Sep: include sigma in production fits.
@@ -89,66 +90,6 @@ ics <- ics %>%
 write.csv(ics, file.path(fp_out, 'clean_WAIC_by_functionalgroup.csv'), row.names = FALSE)
 
 
-# Individual light output -------------------------------------------------
-
-library(tidyverse)
-
-params <- read.csv('finalcsvs/light_piecewise_paramci_by_fg.csv', stringsAsFactors = FALSE)
-
-production_params <- c('beta0','beta1','beta1_low','beta1_high','x0','delta','sigma')
-
-# Alternative names.
-production_params_names <- c('intercept', 'slope', 'slope small trees', 'slope large trees', 'cutoff', 'smoothing parameter','sigma')
-
-# Full names of functional groups
-fg_full_names <- c('fast', 'large pioneer', 'slow', 'small breeder', 'medium', 'all trees', 'unclassified')
-fgs <- c('fg1', 'fg2', 'fg3', 'fg4', 'fg5', 'alltree', 'unclassified')
-
-# correct to alternative names
-indivlight_param_df <- params %>%
-  mutate(parameter_description = production_params_names[match(parameter, production_params)],
-         fg = fg_full_names[match(fg, fgs)],
-         model = case_when(model == 1 ~ 'one segment',
-                           model == 2 ~ 'two segment')) %>%
-  select(-parameter) %>%
-  select(year, fg, model, parameter_description, everything()) %>%
-  filter(!fg %in% 'unclassified')
-
-
-write.csv(indivlight_param_df, file.path(fp_out, 'clean_parameters_individuallight.csv'), row.names = FALSE)
-
-# Clean output of r-squared for production fits
-r2df <- read.csv('finalcsvs/light_piecewise_r2_by_fg.csv', stringsAsFactors = FALSE)
-
-r2df <- r2df %>%
-  mutate(
-    model = case_when(prod_model == 1 ~ 'one segment',
-                      prod_model == 2 ~ 'two segment'),
-    fg = fg_full_names[match(fg, fgs)],
-    r2 = paste0(round(q50, 3), ' [', round(q025, 3), ',', round(q975, 3), ']')) %>%
-  select(year, fg, model, r2) %>%
-  filter(!fg %in% 'unclassified')
-
-write.csv(r2df, file.path(fp_out, 'clean_rsquared_individuallight.csv'), row.names = FALSE)
-
-# Clean output of information criteria
-ics <- read.csv('finalcsvs/light_piecewise_ics_by_fg.csv', stringsAsFactors = FALSE)
-
-ics <- ics %>%
-  filter(criterion == 'WAIC') %>%
-  mutate(
-    model = case_when(prod_model == 1 ~ 'one segment',
-                      prod_model == 2 ~ 'two segment'
-                      ),
-    fg = fg_full_names[match(fg, fgs)]
-  ) %>%
-  rename(WAIC = IC_value,
-         stderr_WAIC = IC_stderr) %>%
-  select(year, variable, fg, model, WAIC, stderr_WAIC) %>%
-  filter(!fg %in% 'unclassified')
-
-write.csv(ics, file.path(fp_out, 'clean_WAIC_by_functionalgroup_individuallight.csv'), row.names = FALSE)
-
 # Volume output -------------------------------------------------
 
 library(tidyverse)
@@ -209,66 +150,6 @@ ics <- ics %>%
 
 write.csv(ics, file.path(fp_out, 'clean_WAIC_by_functionalgroup_crownvolume.csv'), row.names = FALSE)
 
-
-# Captured light output -------------------------------------------------
-
-library(tidyverse)
-
-params <- read.csv('finalcsvs/lightcaptured_piecewise_paramci_by_fg.csv', stringsAsFactors = FALSE)
-
-production_params <- c('beta0','beta1','beta1_low','beta1_high','x0','delta','sigma')
-
-# Alternative names.
-production_params_names <- c('intercept', 'slope', 'slope small trees', 'slope large trees', 'cutoff', 'smoothing parameter','sigma')
-
-# Full names of functional groups
-fg_full_names <- c('fast', 'large pioneer', 'slow', 'small breeder', 'medium', 'all trees', 'unclassified')
-fgs <- c('fg1', 'fg2', 'fg3', 'fg4', 'fg5', 'alltree', 'unclassified')
-
-# correct to alternative names
-indivlightcaptured_param_df <- params %>%
-  mutate(parameter_description = production_params_names[match(parameter, production_params)],
-         fg = fg_full_names[match(fg, fgs)],
-         model = case_when(model == 1 ~ 'one segment',
-                           model == 2 ~ 'two segment')) %>%
-  select(-parameter) %>%
-  select(year, fg, model, parameter_description, everything()) %>%
-  filter(!fg %in% 'unclassified')
-
-
-write.csv(indivlightcaptured_param_df, file.path(fp_out, 'clean_parameters_individuallightcaptured.csv'), row.names = FALSE)
-
-# Clean output of r-squared for production fits
-r2df <- read.csv('finalcsvs/lightcaptured_piecewise_r2_by_fg.csv', stringsAsFactors = FALSE)
-
-r2df <- r2df %>%
-  mutate(
-    model = case_when(prod_model == 1 ~ 'one segment',
-                      prod_model == 2 ~ 'two segment'),
-    fg = fg_full_names[match(fg, fgs)],
-    r2 = paste0(round(q50, 3), ' [', round(q025, 3), ',', round(q975, 3), ']')) %>%
-  select(year, fg, model, r2) %>%
-  filter(!fg %in% 'unclassified')
-
-write.csv(r2df, file.path(fp_out, 'clean_rsquared_individuallightcaptured.csv'), row.names = FALSE)
-
-# Clean output of information criteria
-ics <- read.csv('finalcsvs/lightcaptured_piecewise_ics_by_fg.csv', stringsAsFactors = FALSE)
-
-ics <- ics %>%
-  filter(criterion == 'WAIC') %>%
-  mutate(
-    model = case_when(prod_model == 1 ~ 'one segment',
-                      prod_model == 2 ~ 'two segment'
-    ),
-    fg = fg_full_names[match(fg, fgs)]
-  ) %>%
-  rename(WAIC = IC_value,
-         stderr_WAIC = IC_stderr) %>%
-  select(year, variable, fg, model, WAIC, stderr_WAIC) %>%
-  filter(!fg %in% 'unclassified')
-
-write.csv(ics, file.path(fp_out, 'clean_WAIC_by_functionalgroup_individuallightcaptured.csv'), row.names = FALSE)
 
 # Leaf area output -------------------------------------------------
 
@@ -409,35 +290,6 @@ names(mort_pars)[6:10] <- c('q025', 'q25', 'q50', 'q75', 'q975')
 write_csv(mort_pars, file.path(fp_out, 'clean_parameters_mortality.csv'))
 
 
-# Production per area by light per area -----------------------------------
-
-# parameters
-la_pars <- read_csv('finalcsvs/lightbyarea_paramci_by_fg.csv')
-
-la_par_description <- c('A','b','k','light per area at maximum slope of curve', 'growth per area at maximum slope of curve', 'maximum slope of curve in log-log space')
-
-la_pars_df <- la_pars %>%
-  mutate(parameter_description = rep(la_par_description,7),
-         fg = fg_full_names[match(fg, fgs)]) %>%
-  select(-parameter) %>%
-  select(year, fg, parameter_description, everything()) %>%
-  filter(!fg %in% 'unclassified')
-
-write_csv(la_pars_df, file.path(fp_out, 'clean_parameters_growthperareabylightperarea.csv'))
-
-# r squared values
-r2df <- read.csv('finalcsvs/lightbyarea_r2_by_fg.csv', stringsAsFactors = FALSE)
-
-r2df <- r2df %>%
-  mutate(
-    fg = fg_full_names[match(fg, fgs)],
-    r2 = paste0(round(q50, 3), ' [', round(q025, 3), ',', round(q975, 3), ']')) %>%
-  select(fg, r2) %>%
-  filter(!fg %in% 'unclassified')
-
-write.csv(r2df, file.path(fp_out, 'clean_rsquared_growthperareabylightperarea.csv'), row.names = FALSE)
-
-
 # Fitted slopes of total production on intervals --------------------------
 
 # Read fitted slopes
@@ -494,61 +346,6 @@ slope_table_final <- slopes_at_points %>%
 write.csv(slope_table_final, file.path(fp_out, 'clean_total_production_fitted_slopes.csv'), row.names = FALSE)
 
 
-# Fitted slopes of total light on intervals -------------------------------
-
-# Read fitted slopes
-fitted_slopes <- read.csv('data/data_piecewisefits/light_piecewise_fitted_slopes_by_fg.csv', stringsAsFactors = FALSE) %>%
-  filter(variable %in% 'total_incoming_light', prod_model == 1)
-
-# Read parameters to get the cutoff points, reshape to put all in one row
-cutoffs <- read.csv('data/data_piecewisefits/piecewise_paramci_by_fg.csv', stringsAsFactors = FALSE) %>%
-  filter(variable %in% 'density', grepl('tau', parameter)) %>%
-  select(fg, parameter, q50) %>%
-  pivot_wider(names_from = parameter, values_from = q50)
-
-# Using cutoffs, calculate points at which to extract the fitted slopes
-# For model 1 it can be any point, for model 2 midpoint of upper and lower segment, for model 3 midpoint of each of the 3 segments
-dbh_range <- c(1, 285)
-slope_points <- cutoffs %>%
-  group_by(fg) %>%
-  mutate(point_1 = exp(mean(log(dbh_range))),
-         pointlow_2 = exp(mean(log(c(dbh_range[1], tau)))),
-         pointhigh_2 = exp(mean(log(c(dbh_range[2], tau)))),
-         pointlow_3 = exp(mean(log(c(dbh_range[1], tau_low)))),
-         pointmid_3 = exp(mean(log(c(tau_low, tau_high)))),
-         pointhigh_3 = exp(mean(log(c(dbh_range[2], tau_high))))) %>%
-  select(-(tau:tau_high)) %>%
-  pivot_longer(-fg) %>%
-  separate(name, into = c('point', 'dens_model'), sep = '_') %>%
-  mutate(dens_model = as.integer(dens_model))
-
-# Join the fitted slope data frame with the cutoff points and extract the slopes at the points closest to the midpoints
-slopes_at_points <- fitted_slopes %>%
-  left_join(slope_points) %>%
-  mutate(diff = abs(dbh - value)) %>%
-  group_by(fg, dens_model, point) %>%
-  filter(diff == min(diff)) %>%
-  select(year, fg, dens_model, point, q025:q975) %>%
-  ungroup
-
-# Add median cutoffs to the table
-cutoff_medians <- cutoffs %>%
-  group_by(fg) %>%
-  group_modify(~ data.frame(dens_model = c(1,2,2,3,3,3), 
-                            point = c('point','pointlow','pointhigh','pointlow','pointmid','pointhigh'),
-                            segment = c('all sized trees', 'small trees', 'large trees', 'small trees', 'midsize trees', 'large trees'),
-                            dbh_start = c(1, 1, .$tau, 1, .$tau_low, .$tau_high),
-                            dbh_end = c(285, .$tau, 285, .$tau_low, .$tau_high, 285)))
-
-# add descriptive names to table
-slope_table_final <- slopes_at_points %>%
-  left_join(cutoff_medians %>% ungroup) %>%
-  mutate(fg = fg_full_names[match(fg, fgs)],
-         dens_model = rep(c('one segment', 'two segment', 'two segment', 'three segment', 'three segment', 'three segment'), times = 7)) %>%
-  select(year, fg, dens_model, segment, dbh_start, dbh_end, q025:q975)
-
-write.csv(slope_table_final, file.path(fp_out, 'clean_total_light_fitted_slopes.csv'), row.names = FALSE)
-
 # Fitted slopes of total crown volume on intervals ------------------------
 
 # Read fitted slopes
@@ -604,61 +401,6 @@ slope_table_final <- slopes_at_points %>%
 
 write.csv(slope_table_final, file.path(fp_out, 'clean_total_volume_fitted_slopes.csv'), row.names = FALSE)
 
-
-# Fitted slopes of total captured light on intervals -------------------------------
-
-# Read fitted slopes
-fitted_slopes <- read.csv('data/data_piecewisefits/lightcaptured_piecewise_fitted_slopes_by_fg.csv', stringsAsFactors = FALSE) %>%
-  filter(variable %in% 'total_captured_light', prod_model == 1)
-
-# Read parameters to get the cutoff points, reshape to put all in one row
-cutoffs <- read.csv('data/data_piecewisefits/piecewise_paramci_by_fg.csv', stringsAsFactors = FALSE) %>%
-  filter(variable %in% 'density', grepl('tau', parameter)) %>%
-  select(fg, parameter, q50) %>%
-  pivot_wider(names_from = parameter, values_from = q50)
-
-# Using cutoffs, calculate points at which to extract the fitted slopes
-# For model 1 it can be any point, for model 2 midpoint of upper and lower segment, for model 3 midpoint of each of the 3 segments
-dbh_range <- c(1, 285)
-slope_points <- cutoffs %>%
-  group_by(fg) %>%
-  mutate(point_1 = exp(mean(log(dbh_range))),
-         pointlow_2 = exp(mean(log(c(dbh_range[1], tau)))),
-         pointhigh_2 = exp(mean(log(c(dbh_range[2], tau)))),
-         pointlow_3 = exp(mean(log(c(dbh_range[1], tau_low)))),
-         pointmid_3 = exp(mean(log(c(tau_low, tau_high)))),
-         pointhigh_3 = exp(mean(log(c(dbh_range[2], tau_high))))) %>%
-  select(-(tau:tau_high)) %>%
-  pivot_longer(-fg) %>%
-  separate(name, into = c('point', 'dens_model'), sep = '_') %>%
-  mutate(dens_model = as.integer(dens_model))
-
-# Join the fitted slope data frame with the cutoff points and extract the slopes at the points closest to the midpoints
-slopes_at_points <- fitted_slopes %>%
-  left_join(slope_points) %>%
-  mutate(diff = abs(dbh - value)) %>%
-  group_by(fg, dens_model, point) %>%
-  filter(diff == min(diff)) %>%
-  select(year, fg, dens_model, point, q025:q975) %>%
-  ungroup
-
-# Add median cutoffs to the table
-cutoff_medians <- cutoffs %>%
-  group_by(fg) %>%
-  group_modify(~ data.frame(dens_model = c(1,2,2,3,3,3), 
-                            point = c('point','pointlow','pointhigh','pointlow','pointmid','pointhigh'),
-                            segment = c('all sized trees', 'small trees', 'large trees', 'small trees', 'midsize trees', 'large trees'),
-                            dbh_start = c(1, 1, .$tau, 1, .$tau_low, .$tau_high),
-                            dbh_end = c(285, .$tau, 285, .$tau_low, .$tau_high, 285)))
-
-# add descriptive names to table
-slope_table_final <- slopes_at_points %>%
-  left_join(cutoff_medians %>% ungroup) %>%
-  mutate(fg = fg_full_names[match(fg, fgs)],
-         dens_model = rep(c('one segment', 'two segment', 'two segment', 'three segment', 'three segment', 'three segment'), times = 7)) %>%
-  select(year, fg, dens_model, segment, dbh_start, dbh_end, q025:q975)
-
-write.csv(slope_table_final, file.path(fp_out, 'clean_total_light_captured_fitted_slopes.csv'), row.names = FALSE)
 
 # Fitted slopes of total leaf area on intervals ------------------------
 
@@ -748,11 +490,8 @@ ratioslopes_diameter_pioneerbreeder <- ratioslopes_diameter %>%
   mutate(scaling_variable = 'diameter') %>%
   select(ratio, scaling_variable, segment, everything())
 
-ratioslopequantiles_light <- read_csv('data_piecewisefits/ratio_parameters_lightbyarea.csv') %>%
-  rename(scaling_variable = variable) %>%
-  mutate(segment = 'all', ratio = rep(c('fast:slow','pioneer:breeder'), each = 2), variable = rep(c('density', 'total production'), times = 2))
 
-allratioslopequantiles <- bind_rows(ratioslopes_diameter_fastslow, ratioslopes_diameter_pioneerbreeder, ratioslopequantiles_light) %>%
+allratioslopequantiles <- bind_rows(ratioslopes_diameter_fastslow, ratioslopes_diameter_pioneerbreeder) %>%
   select(-q05, -q95) 
   
 write.csv(allratioslopequantiles, file.path(fp_out, 'clean_ratio_fitted_slopes.csv'), row.names = FALSE)

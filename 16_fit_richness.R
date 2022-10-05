@@ -30,34 +30,18 @@ load('data/data_binned/bin_object_singleyear.RData')
 
 # Use existing bin bounds
 bin_bounds <- fastslow_stats_bydiam_byyear[1:20, c('bin_midpoint', 'bin_min', 'bin_max')]
-bin_bounds_light <- fastslow_stats_bylight_byyear[1:20, c('bin_midpoint', 'bin_min', 'bin_max')]
 # Get richness of each FG by each bin
 
 bin_x_fg <- expand_grid(fg = c(paste0('fg', 1:5), 'unclassified'), bin = 1:20) %>%
   left_join(bin_bounds %>% mutate(bin = 1:20))
 
-bin_x_fg_light <- expand_grid(fg = c(paste0('fg', 1:5), 'unclassified'), bin = 1:20) %>%
-  left_join(bin_bounds_light %>% mutate(bin = 1:20))
-
 # 1995 data (132,982 trees)
 dat <- alltreedat[[3]] %>%
   mutate(fg = if_else(is.na(fg), 'unclassified', paste0('fg', fg)))
 
-# 1995 data with light values (113,651 trees)
-dat_light <- dat %>%
-  filter(!is.na(light_received_byarea))
-
 bin_x_fg <- bin_x_fg %>%
   cbind(pmap_dfr(bin_x_fg, function(fg, bin_min, bin_max, ...) {
     sp_ids <- as.character(dat$sp[dat$fg %in% fg & dat$dbh_corr >= bin_min & dat$dbh_corr < bin_max])
-    data.frame(richness = length(unique(sp_ids)),
-               n_individuals = length(sp_ids))
-  })) %>%
-  mutate(richness_by_bin_width = richness / (bin_max - bin_min))
-
-bin_x_fg_light <- bin_x_fg_light %>%
-  cbind(pmap_dfr(bin_x_fg_light, function(fg, bin_min, bin_max, ...) {
-    sp_ids <- as.character(dat_light$sp[dat_light$fg %in% fg & dat_light$light_received_byarea >= bin_min & dat_light$light_received_byarea < bin_max])
     data.frame(richness = length(unique(sp_ids)),
                n_individuals = length(sp_ids))
   })) %>%
@@ -68,9 +52,6 @@ bin_x_fg_light <- bin_x_fg_light %>%
 bin_all <- data.frame(fg = 'all', bin = 1:20) %>%
   left_join(bin_bounds %>% mutate(bin = 1:20))
 
-bin_all_light <- data.frame(fg = 'all', bin = 1:20) %>%
-  left_join(bin_bounds_light %>% mutate(bin = 1:20))
-
 bin_all <- bin_all %>%
   cbind(pmap_dfr(bin_all, function(bin_min, bin_max, ...) {
     sp_ids <- as.character(dat$sp[dat$dbh_corr >= bin_min & dat$dbh_corr < bin_max])
@@ -79,23 +60,12 @@ bin_all <- bin_all %>%
   })) %>%
   mutate(richness_by_bin_width = richness / (bin_max - bin_min))
 
-bin_all_light <- bin_all_light %>%
-  cbind(pmap_dfr(bin_all_light, function(bin_min, bin_max, ...) {
-    sp_ids <- as.character(dat_light$sp[dat_light$light_received_byarea >= bin_min & dat_light$light_received_byarea < bin_max])
-    data.frame(richness = length(unique(sp_ids)),
-               n_individuals = length(sp_ids))
-  })) %>%
-  mutate(richness_by_bin_width = richness / (bin_max - bin_min))
-
 # Create model input data for all trees
 dat_all <- with(bin_all %>% filter(richness > 0), list(x = bin_midpoint, y = richness_by_bin_width, N = nrow(bin_all)))
-dat_all_light <- with(bin_all_light %>% filter(richness > 0), list(x = bin_midpoint, y = richness_by_bin_width, N = nrow(bin_all_light)))
 
 # Create model input data for each FG
 bin_x_fg_use <- bin_x_fg %>% filter(richness > 0, !fg %in% 'unclassified')
 dat_fg <- with(bin_x_fg_use, list(x = bin_midpoint, y = richness_by_bin_width, fg = as.numeric(factor(fg)), N = nrow(bin_x_fg_use), M = 5))
-bin_x_fg_light_use <- bin_x_fg_light %>% filter(richness > 0, !fg %in% 'unclassified')
-dat_fg_light <- with(bin_x_fg_light_use, list(x = bin_midpoint, y = richness_by_bin_width, fg = as.numeric(factor(fg)), N = nrow(bin_x_fg_light_use), M = 5))
 
 # Load and fit models -----------------------------------------------------
 
@@ -110,15 +80,9 @@ mod_3seg_mixed <- stan_model('model_scripts/richness_3segment_mixedmodel.stan')
 fit_2seg_linear_all <- sampling(mod_2seg_linear, data = dat_all, chains = 3, iter = 5000, warmup = 4000, seed = 222)
 fit_3seg_linear_all <- sampling(mod_3seg_linear, data = dat_all, chains = 3, iter = 5000, warmup = 4000, seed = 111)
 
-fit_2seg_linear_all_light <- sampling(mod_2seg_linear, data = dat_all_light, chains = 3, iter = 5000, warmup = 4000, seed = 222)
-fit_3seg_linear_all_light <- sampling(mod_3seg_linear, data = dat_all_light, chains = 3, iter = 5000, warmup = 4000, seed = 111)
-
 fit_2seg_mixed_all <- sampling(mod_2seg_mixed, data = dat_fg, chains = 3, iter = 5000, warmup = 4000, seed = 333)
 # More iterations needed to converge 3 segment mixed model, and increased treedepth. Works OK.
 fit_3seg_mixed_all <- sampling(mod_3seg_mixed, data = dat_fg, chains = 3, iter = 10000, warmup = 9000, seed = 4444, control = list(max_treedepth = 20))
-
-fit_2seg_mixed_all_light <- sampling(mod_2seg_mixed, data = dat_fg_light, chains = 3, iter = 5000, warmup = 4000, seed = 555)
-fit_3seg_mixed_all_light <- sampling(mod_3seg_mixed, data = dat_fg_light, chains = 3, iter = 10000, warmup = 9000, seed = 666, control = list(max_treedepth = 20))
 
 # Extract output ----------------------------------------------------------
 
@@ -137,11 +101,10 @@ threeseg_log <- function(x, alpha, beta, tau_low, tau_high) {
 }
 
 dbh_pred <- exp(seq(log(1), log(315), length.out = 101))
-light_pred <- exp(seq(log(1), log(412), length.out = 101))
 qprobs <- c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975) 
 
 # Only extract from three segment model.
-# Extract from the all-tree linear model, and the by-group mixed model, for both diameter and light/area.
+# Extract from the all-tree linear model, and the by-group mixed model
 
 # Parameter values
 # ================
@@ -163,36 +126,18 @@ params_3seg_diam_mixed <- data.frame(fg = 1:5,
   setNames(df_col_names)
 params_3seg_diam <- rbind(params_3seg_diam_all, params_3seg_diam_mixed)
 
-params_3seg_light_all <- data.frame(fg = 'all',
-                                    parameter = c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'),
-                                   summary(fit_3seg_linear_all_light, pars = par_names_3seg_linear)[[1]]) %>%
-  setNames(df_col_names)
-params_3seg_light_mixed <- data.frame(fg = 1:5,
-                                     parameter = rep(c('alpha','beta_low','beta_mid','beta_high','tau_low','tau_high'), each = 5),
-                                     summary(fit_3seg_mixed_all_light, pars = par_names_3seg_mixed)[[1]]) %>%
-  setNames(df_col_names)
-params_3seg_light <- rbind(params_3seg_light_all, params_3seg_light_mixed)
-
 # Fitted and predicted values
 # ===========================
 
 # Extract needed parameter estimates from each iteration, to be used for fitted values, fitted slopes, R2, and corr. factor.
 par_draws_linear_diam <- extract(fit_3seg_linear_all, pars = par_names_3seg_linear)
-par_draws_linear_light <- extract(fit_3seg_linear_all_light, pars = par_names_3seg_linear)
 par_draws_mixed_diam <- extract(fit_3seg_mixed_all, pars = par_names_3seg_mixed)
-par_draws_mixed_light <- extract(fit_3seg_mixed_all_light, pars = par_names_3seg_mixed)
 
 # Reshape the parameter draws into data frames
 par_draws_linear_diam <- do.call(cbind, par_draws_linear_diam) %>%
   as.data.frame %>% setNames(c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))
-par_draws_linear_light <- do.call(cbind, par_draws_linear_light) %>%
-  as.data.frame %>% setNames(c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))
 
 par_draws_mixed_diam <- imap_dfr(par_draws_mixed_diam, ~ data.frame(iter = 1:nrow(.x), parameter = .y, .x)) %>%
-  pivot_longer(-c(iter, parameter), names_to = 'fg') %>%
-  pivot_wider(id_cols = c(iter, fg), names_from = parameter, values_from = value) %>%
-  mutate(fg = as.numeric(substr(fg, 2, 2)))
-par_draws_mixed_light <- imap_dfr(par_draws_mixed_light, ~ data.frame(iter = 1:nrow(.x), parameter = .y, .x)) %>%
   pivot_longer(-c(iter, parameter), names_to = 'fg') %>%
   pivot_wider(id_cols = c(iter, fg), names_from = parameter, values_from = value) %>%
   mutate(fg = as.numeric(substr(fg, 2, 2)))
@@ -202,19 +147,10 @@ fitted_linear_diam <- par_draws_linear_diam %>%
   mutate(iter = 1:nrow(.)) %>%
   group_by(iter) %>%
   group_modify(~ data.frame(x = dbh_pred, y_fit = threeseg_log(x = dbh_pred, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
-fitted_linear_light <- par_draws_linear_light %>%
-  mutate(iter = 1:nrow(.)) %>%
-  group_by(iter) %>%
-  group_modify(~ data.frame(x = light_pred, y_fit = threeseg_log(x = light_pred, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
-
 
 fitted_mixed_diam <- par_draws_mixed_diam %>% 
   group_by(iter, fg) %>%
   group_modify(~ data.frame(x = dbh_pred, y_fit = threeseg_log(x = dbh_pred, alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)))
-fitted_mixed_light <- par_draws_mixed_light %>% 
-  group_by(iter, fg) %>%
-  group_modify(~ data.frame(x = light_pred, y_fit = threeseg_log(x = light_pred, alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)))
-
 
 # Get quantiles of the fitted values
 df_col_names <- c('q025', 'q05', 'q25', 'q50', 'q75', 'q95', 'q975')
@@ -224,20 +160,10 @@ fittedquant_linear_diam <- fitted_linear_diam %>%
   group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
   setNames(c('dbh', df_col_names))
 
-fittedquant_linear_light <- fitted_linear_light %>%
-  group_by(x) %>%
-  group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
-  setNames(c('lightarea', df_col_names))
-
 fittedquant_mixed_diam <- fitted_mixed_diam %>%
   group_by(fg, x) %>%
   group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
   setNames(c('fg', 'dbh', df_col_names))
-
-fittedquant_mixed_light <- fitted_mixed_light %>%
-  group_by(fg, x) %>%
-  group_modify(~ data.frame(t(quantile(.$y_fit, probs = qprobs)))) %>%
-  setNames(c('fg', 'lightarea', df_col_names))
 
 # correction factor for log-log regression plot
 # =============================================
@@ -247,10 +173,6 @@ linpred_linear_diam <- par_draws_linear_diam %>%
   mutate(iter = 1:nrow(.)) %>%
   group_by(iter) %>%
   group_modify(~ data.frame(x = dat_all$x, y = dat_all$y, y_fit = threeseg_log(x = dat_all$x, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
-linpred_linear_light <- par_draws_linear_light %>%
-  mutate(iter = 1:nrow(.)) %>%
-  group_by(iter) %>%
-  group_modify(~ data.frame(x = dat_all_light$x, y = dat_all_light$y, y_fit = threeseg_log(x = dat_all_light$x, alpha = .$alpha, beta = c(.$beta_low, .$beta_mid, .$beta_high), tau_low = .$tau_low, tau_high = .$tau_high)))
 
 linpred_mixed_diam <- par_draws_mixed_diam %>% 
   group_by(iter, fg) %>%
@@ -258,22 +180,12 @@ linpred_mixed_diam <- par_draws_mixed_diam %>%
                             y = dat_fg$y[dat_fg$fg == .$fg[1]],
                             y_fit = threeseg_log(x =  dat_fg$x[dat_fg$fg == .$fg[1]], alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)),
                keep = TRUE)
-linpred_mixed_light <- par_draws_mixed_light %>% 
-  group_by(iter, fg) %>%
-  group_modify(~ data.frame(x = dat_fg_light$x[dat_fg_light$fg == .$fg[1]],
-                            y = dat_fg_light$y[dat_fg_light$fg == .$fg[1]],
-                            y_fit = threeseg_log(x =  dat_fg_light$x[dat_fg_light$fg == .$fg[1]], alpha = .$coef_alpha, beta = c(.$coef_beta_low, .$coef_beta_mid, .$coef_beta_high), tau_low = .$coef_tau_low, tau_high = .$coef_tau_high)),
-               keep = TRUE)
 
 # Take log of fitted values and get residuals by subtracting log of observed y from log of fitted y
 linpred_linear_diam <- linpred_linear_diam %>%
   mutate(resid = log(y_fit) - log(y))
-linpred_linear_light <- linpred_linear_light %>%
-  mutate(resid = log(y_fit) - log(y))
 
 linpred_mixed_diam <- linpred_mixed_diam %>%
-  mutate(resid = log(y_fit) - log(y))
-linpred_mixed_light <- linpred_mixed_light %>%
   mutate(resid = log(y_fit) - log(y))
 
 # Bias correction factor: take sum of squared residuals
@@ -289,12 +201,6 @@ cf_linear_diam <- linpred_linear_diam %>%
             n = n()) %>%
   mutate(see = (ssq_resid / (n - k_linearmodel))^0.5,
          cf = exp((see^2)/2))
-cf_linear_light <- linpred_linear_light %>%
-  group_by(iter) %>%
-  summarize(ssq_resid = sum(resid^2),
-            n = n()) %>%
-  mutate(see = (ssq_resid / (n - k_linearmodel))^0.5,
-         cf = exp((see^2)/2))
 
 cf_mixed_diam <- linpred_mixed_diam %>%
   group_by(iter) %>%
@@ -302,22 +208,12 @@ cf_mixed_diam <- linpred_mixed_diam %>%
             n = n()) %>%
   mutate(see = (ssq_resid / (n - k_mixedmodel))^0.5,
          cf = exp((see^2)/2))
-cf_mixed_light <- linpred_mixed_light %>%
-  group_by(iter) %>%
-  summarize(ssq_resid = sum(resid^2),
-            n = n()) %>%
-  mutate(see = (ssq_resid / (n - k_mixedmodel))^0.5,
-         cf = exp((see^2)/2))
-  
+
 # Extract quantiles of correction factor
 cfquant_linear_diam <- as.data.frame(t(quantile(cf_linear_diam$cf, probs = qprobs))) %>%
   setNames(df_col_names)
-cfquant_linear_light <- as.data.frame(t(quantile(cf_linear_light$cf, probs = qprobs))) %>%
-  setNames(df_col_names)
 
 cfquant_mixed_diam <- as.data.frame(t(quantile(cf_mixed_diam$cf, probs = qprobs))) %>%
-  setNames(df_col_names)
-cfquant_mixed_light <- as.data.frame(t(quantile(cf_mixed_light$cf, probs = qprobs))) %>%
   setNames(df_col_names)
 
 # Write the extracted output to files
@@ -331,16 +227,8 @@ params_3seg_diam <- params_3seg_diam %>%
   mutate_at(vars('mean', starts_with('q')), ~ if_else(grepl('tau', parameter), 10 ^ ., .)) %>%
   mutate(year = 1995, model = '3 segment') %>%
   select(year, model, everything())
-params_3seg_light <- params_3seg_light %>%
-  mutate(fg = factor(fg, levels = c('all', 1:5), labels = c('all', 'fast', 'large pioneer', 'slow', 'small breeder', 'medium')),
-         parameter = factor(parameter, levels = c('alpha', 'beta_low', 'beta_mid', 'beta_high', 'tau_low', 'tau_high'))) %>%
-  arrange(fg, parameter) %>%
-  mutate_at(vars('mean', starts_with('q')), ~ if_else(grepl('tau', parameter), 10 ^ ., .)) %>%
-  mutate(year = 1995, model = '3 segment') %>%
-  select(year, model, everything())
 
 write_csv(params_3seg_diam, 'data/data_piecewisefits/richnessbydiameter_paramci_by_fg.csv')
-write_csv(params_3seg_light, 'data/data_piecewisefits/richnessbylightarea_paramci_by_fg.csv')
 
 # Write fitted values and CI
 fittedquant_diam <- data.frame(
@@ -348,22 +236,13 @@ fittedquant_diam <- data.frame(
   model = '3 segment',
   bind_rows(data.frame(fg = 'all', fittedquant_linear_diam), 
                               fittedquant_mixed_diam %>% ungroup %>% mutate(fg = paste0('fg', fg))))
-fittedquant_light <- data.frame(
-  year = 1995,
-  model = '3 segment',
-  bind_rows(data.frame(fg = 'all', fittedquant_linear_light), 
-            fittedquant_mixed_light %>% ungroup %>% mutate(fg = paste0('fg', fg)))) %>%
-  rename(light_area = lightarea)
 
 write_csv(fittedquant_diam, 'data/data_piecewisefits/richnessbydiameter_ci_by_fg.csv')
-write_csv(fittedquant_light, 'data/data_piecewisefits/richnessbylightarea_ci_by_fg.csv')
 
 # Write correction factors
 cfquant_diam <- data.frame(fg = c('all', 'by_fg'), bind_rows(cfquant_linear_diam, cfquant_mixed_diam))
-cfquant_light <- data.frame(fg = c('all', 'by_fg'), bind_rows(cfquant_linear_light, cfquant_mixed_light))
 
 write_csv(cfquant_diam, 'data/data_piecewisefits/richnessbydiameter_cf_by_fg.csv')
-write_csv(cfquant_light, 'data/data_piecewisefits/richnessbylightarea_cf_by_fg.csv')
 
 # Create clean summary tables ---------------------------------------------
 
@@ -371,25 +250,17 @@ write_csv(cfquant_light, 'data/data_piecewisefits/richnessbylightarea_cf_by_fg.c
 params_3seg_diam %>%
   mutate(parameter = factor(parameter, labels = c('intercept', 'slope small trees', 'slope midsize trees', 'slope large trees', 'cutoff small to midsize', 'cutoff midsize to large'))) %>%
   write_csv('data/clean_summary_tables/clean_parameters_richnessbydiameter.csv')
-params_3seg_light %>%
-  mutate(parameter = factor(parameter, labels = c('intercept', 'slope small trees', 'slope midsize trees', 'slope large trees', 'cutoff small to midsize', 'cutoff midsize to large'))) %>%
-  write_csv('data/clean_summary_tables/clean_parameters_richnessbylightarea.csv')
 
 # Create plotting data ----------------------------------------------------
 
 # Observed data
 obs_richnessbydiameter <- data.frame(year = 1995, bind_rows(bin_all, bin_x_fg)) %>%
   mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
-obs_richnessbylightarea <- data.frame(year = 1995, bind_rows(bin_all_light, bin_x_fg_light)) %>%
-  mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
 
 # Fitted data (the same as the ci data frame.)
 
 write_csv(obs_richnessbydiameter, 'data/data_forplotting/obs_richnessbydiameter.csv')
-write_csv(obs_richnessbylightarea, 'data/data_forplotting/obs_richnessbylightarea.csv')
 write_csv(fittedquant_diam, 'data/data_forplotting/fitted_richnessbydiameter.csv')
-write_csv(fittedquant_light, 'data/data_forplotting/fitted_richnessbylightarea.csv')
-
 
 # Ratio trends ------------------------------------------------------------
 
@@ -408,12 +279,6 @@ ratio_diam <- map(fg_pairs, function(fgs) {
     pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = y_fit) %>%
     mutate(ratio = .data[[as.character(fgs[1])]]/.data[[as.character(fgs[2])]]) 
 })
-ratio_light <- map(fg_pairs, function(fgs) {
-  fitted_mixed_light %>%
-    filter(fg %in% fgs) %>%
-    pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = y_fit) %>%
-    mutate(ratio = .data[[as.character(fgs[1])]]/.data[[as.character(fgs[2])]]) 
-})
 
 # Quantiles of fitted values of ratios
 ratioquant_diam <- map(ratio_diam, function(dat) {
@@ -422,12 +287,6 @@ ratioquant_diam <- map(ratio_diam, function(dat) {
     group_modify(~ as.data.frame(t(quantile(.$ratio, probs = qprobs)))) %>%
     setNames(c('dbh', df_col_names))
 })
-ratioquant_light <- map(ratio_light, function(dat) {
-  dat %>%
-    group_by(x) %>%
-    group_modify(~ as.data.frame(t(quantile(.$ratio, probs = qprobs)))) %>%
-    setNames(c('light_area', df_col_names))
-})
 
 # Fitted slopes of ratios (raw)
 log_slope <- function(x, y) (x[-1]/y[-1]) * diff(y)/diff(x)  
@@ -435,18 +294,9 @@ log_slope <- function(x, y) (x[-1]/y[-1]) * diff(y)/diff(x)
 fittedslope_mixed_diam <- fitted_mixed_diam %>%
   group_by(iter, fg) %>%
   group_modify(~ data.frame(x = exp(midpts(log(.$x))), slope = log_slope(.$x, .$y_fit)))
-fittedslope_mixed_light <- fitted_mixed_light %>%
-  group_by(iter, fg) %>%
-  group_modify(~ data.frame(x = exp(midpts(log(.$x))), slope = log_slope(.$x, .$y_fit)))
 
 ratioslope_diam <- map(fg_pairs, function(fgs) {
   fittedslope_mixed_diam %>%
-    filter(fg %in% fgs) %>%
-    pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = slope) %>%
-    mutate(slope = .data[[as.character(fgs[1])]] - .data[[as.character(fgs[2])]]) 
-})
-ratioslope_light <- map(fg_pairs, function(fgs) {
-  fittedslope_mixed_light %>%
     filter(fg %in% fgs) %>%
     pivot_wider(id_cols = c(iter, x), names_from = fg, values_from = slope) %>%
     mutate(slope = .data[[as.character(fgs[1])]] - .data[[as.character(fgs[2])]]) 
@@ -459,24 +309,15 @@ ratioslopequant_diam <- map(ratioslope_diam, function(dat) {
     group_modify(~ as.data.frame(t(quantile(.$slope, probs = qprobs)))) %>%
     setNames(c('dbh', df_col_names))
 })
-ratioslopequant_light <- map(ratioslope_light, function(dat) {
-  dat %>%
-    group_by(x) %>%
-    group_modify(~ as.data.frame(t(quantile(.$slope, probs = qprobs)))) %>%
-    setNames(c('dbh', df_col_names))
-})
 
 # Write ratio trends to file
 ratio_names <- map(combn(fg_titles, 2, simplify = FALSE), paste, collapse = ':')
 ratio_diam_table <- map2_dfr(ratioquant_diam, ratio_names, ~ data.frame(ratio = .y, .x))
-ratio_light_table <- map2_dfr(ratioquant_light, ratio_names, ~ data.frame(ratio = .y, .x))
 
 write_csv(ratio_diam_table, 'data/data_piecewisefits/ratio_fittedvalues_richnessbydiameter_allpairwise.csv')
-write_csv(ratio_light_table, 'data/data_piecewisefits/ratio_fittedvalues_richnessbylightarea_allpairwise.csv')
 
 # Also put a copy in the data_forplotting directory
 write_csv(ratio_diam_table, 'data/data_forplotting/fitted_richnessbydiameter_ratio_allpairwise.csv')
-write_csv(ratio_light_table, 'data/data_forplotting/fitted_richnessbylightarea_ratio_allpairwise.csv')
 
 # Observed richness bin values
 obs_richness_ratio_diam <- map2_dfr(fg_pairs, ratio_names, function(fgs, ratio_name) {
@@ -491,21 +332,8 @@ obs_richness_ratio_diam <- map2_dfr(fg_pairs, ratio_names, function(fgs, ratio_n
   ) %>%
     mutate_if(is.double, ~ if_else(is.finite(.), ., as.numeric(NA)))
 })
-obs_richness_ratio_light <- map2_dfr(fg_pairs, ratio_names, function(fgs, ratio_name) {
-  bin_top <- bin_x_fg_light %>% filter(fg == paste0('fg', fgs[1]))
-  bin_bottom <- bin_x_fg_light %>% filter(fg == paste0('fg', fgs[2]))
-  tibble(
-    ratio_name = ratio_name,
-    bin = bin_top$bin, bin_midpoint = bin_top$bin_midpoint, bin_min = bin_top$bin_min, bin_max = bin_top$bin_max,
-    richness_ratio = bin_top$richness / bin_bottom$richness,
-    lowest_n = pmin(bin_top$n_individuals, bin_bottom$n_individuals),
-    lowest_rich = pmin(bin_top$richness, bin_bottom$richness)
-  ) %>%
-    mutate_if(is.double, ~ if_else(is.finite(.), ., as.numeric(NA)))
-})
 
 write_csv(obs_richness_ratio_diam, 'data/data_forplotting/obs_richnessbydiameter_ratio_allpairwise.csv')
-write_csv(obs_richness_ratio_light, 'data/data_forplotting/obs_richnessbylightarea_ratio_allpairwise.csv')
 
 # Create clean data frame of fitted slope quantiles, with one slope per segment
 # Extract slope at midpoints between cutoffs to get this value
@@ -515,11 +343,6 @@ fg_names_old <- c('fast', 'large pioneer', 'slow', 'small breeder')
 
 cutoffs_diam <- map(fg_pairs, function(fgs) {
   params_3seg_diam %>%
-    filter(fg %in% fg_names_old[fgs], grepl('tau', parameter)) %>%
-    pull(q50) %>% sort
-})
-cutoffs_light <- map(fg_pairs, function(fgs) {
-  params_3seg_light %>%
     filter(fg %in% fg_names_old[fgs], grepl('tau', parameter)) %>%
     pull(q50) %>% sort
 })
@@ -537,22 +360,9 @@ ratioslopesegment_diam <- map2(ratioslopequant_diam, cutoffs_diam, function(slop
     select(segment, everything())
 })
 
-ratioslopesegment_light <- map2(ratioslopequant_light, cutoffs_light, function(slopes, cutoffs) {
-  slopes %>%
-    ungroup %>%
-    mutate(segment = cut(dbh, breaks = c(1, cutoffs[-1], 400), include.lowest = TRUE)) %>%
-    group_by(segment) %>%
-    filter(abs(dbh-median(dbh)) == min(abs(dbh-median(dbh)))) %>%
-    slice(1) %>%
-    filter(!is.na(segment)) %>%
-    select(-dbh) %>%
-    select(segment, everything())
-})
+ratioslope_all_clean <- 
+  map2_dfr(ratioslopesegment_diam, ratio_names, ~ tibble(ratio_name = .y, scaling_variable = 'diameter', .x))
 
-ratioslope_all_clean <- bind_rows(
-  map2_dfr(ratioslopesegment_diam, ratio_names, ~ tibble(ratio_name = .y, scaling_variable = 'diameter', .x)),
-  map2_dfr(ratioslopesegment_light, ratio_names, ~ tibble(ratio_name = .y, scaling_variable = 'light per area', .x))
-)
 
 write_csv(ratioslope_all_clean, 'data/clean_summary_tables/clean_richness_ratio_fitted_slopes_allpairwise.csv')
 
@@ -565,7 +375,6 @@ write_csv(ratioslope_all_clean, 'data/clean_summary_tables/clean_richness_ratio_
 library(brms)
 
 bin_x_fg <- bin_x_fg %>% mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
-bin_x_fg_light <- bin_x_fg_light %>% mutate(abundance_by_bin_width = n_individuals / (bin_max - bin_min))
 
 fit_richxabund_diam <- brm(log_richness ~ log_abundance + (log_abundance|fg),
                            data = bin_x_fg %>% 

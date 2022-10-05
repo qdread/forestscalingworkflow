@@ -126,7 +126,7 @@ totalproductionbin_byyear <- rbind(
 totalproductionbin_5census <- cbind(fg = rep(group_names, each = numbins), 
                                     rbind(totalprodbin_all_5census, totalprodbin_allclassified_5census, do.call('rbind', totalprodbin_fg_5census)))
 
-# Total light received and crown area
+# Leaf area and crown area
 # 1990 and 1995 only
 
 ## crown area
@@ -171,78 +171,16 @@ leafareabin_fg_2census <- lapply(leafareabin_fg_byyear, bin_across_years)
 leafareabin_2census <- cbind(fg = rep(group_names, each = numbins), 
                                 rbind(leafareabin_all_2census, leafareabin_allclassified_2census, do.call('rbind', leafareabin_fg_2census)))
 
-## light received
-lightreceivedbin_alltree_byyear <- alltreedat[2:3] %>% map(~ with(filter(., !is.na(light_received)), logbin_setedges(x = dbh_corr, y = light_received, edges = dbhbin_all)))
-lightreceivedbin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ with(filter(., !is.na(light_received)), logbin_setedges(x = dbh_corr, y = light_received, edges = dbhbin_all)))
-
-lightreceivedbin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) with(filter(z, !is.na(light_received)), logbin_setedges(x = dbh_corr, y = light_received, edges = dbhbin_allclassified))))
-
-lightreceivedbin_all_2census <- bin_across_years(lightreceivedbin_alltree_byyear)
-lightreceivedbin_allclassified_2census <- bin_across_years(lightreceivedbin_allclassified_byyear)
-lightreceivedbin_fg_2census <- lapply(lightreceivedbin_fg_byyear, bin_across_years)
-
-lightreceivedbin_2census <- cbind(fg = rep(group_names, each = numbins), 
-                                  rbind(lightreceivedbin_all_2census, lightreceivedbin_allclassified_2census, do.call('rbind', lightreceivedbin_fg_2census)))
-
-## light captured (light received * fraction light captured)
-lightcapturedbin_alltree_byyear <- alltreedat[2:3] %>% map(~ with(filter(., !is.na(light_captured)), logbin_setedges(x = dbh_corr, y = light_captured, edges = dbhbin_all)))
-lightcapturedbin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ with(filter(., !is.na(light_captured)), logbin_setedges(x = dbh_corr, y = light_captured, edges = dbhbin_all)))
-
-lightcapturedbin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) with(filter(z, !is.na(light_captured)), logbin_setedges(x = dbh_corr, y = light_captured, edges = dbhbin_allclassified))))
-
-lightcapturedbin_all_2census <- bin_across_years(lightcapturedbin_alltree_byyear)
-lightcapturedbin_allclassified_2census <- bin_across_years(lightcapturedbin_allclassified_byyear)
-lightcapturedbin_fg_2census <- lapply(lightcapturedbin_fg_byyear, bin_across_years)
-
-lightcapturedbin_2census <- cbind(fg = rep(group_names, each = numbins), 
-                                  rbind(lightcapturedbin_all_2census, lightcapturedbin_allclassified_2census, do.call('rbind', lightcapturedbin_fg_2census)))
-
-## light received per unit crown area
-lightperareabin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownarea, edges = dbhbin_all))
-lightperareabin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownarea, edges = dbhbin_all))
-
-lightperareabin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$light_received/z$crownarea, edges = dbhbin_allclassified)))
-
-## light received per unit crown volume
-lightpervolumebin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownvolume, edges = dbhbin_all))
-lightpervolumebin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownvolume, edges = dbhbin_all))
-
-lightpervolumebin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$light_received/z$crownvolume, edges = dbhbin_allclassified)))
-
 ## Combine the individual 1995 bins to data frames and then write them to R object.
 crownareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', crownareabin_allclassified_byyear[[2]]),
                            map2_dfr(crownareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
 crownvolumebins1995 <- rbind(data.frame(year = 1995, fg = 'all', crownvolumebin_allclassified_byyear[[2]]),
                              map2_dfr(crownvolumebin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-lightreceivedbins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightreceivedbin_allclassified_byyear[[2]]),
-                               map2_dfr(lightreceivedbin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-lightperareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightperareabin_allclassified_byyear[[2]]),
-                              map2_dfr(lightperareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-lightpervolumebins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightpervolumebin_allclassified_byyear[[2]]),
-                                map2_dfr(lightpervolumebin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
 leafareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', leafareabin_allclassified_byyear[[2]]),
                           map2_dfr(leafareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-lightcapturedbins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightcapturedbin_allclassified_byyear[[2]]),
-                               map2_dfr(lightcapturedbin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
 
-# Production and light received per meter squared of crown area.
+# Production per meter squared of crown area.
 # Divide production by crown area and bin (1990 and 1995)
-# Divide light received by crown area and bin (1990 and 1995)
-
-# Bin the entire light received per crown area dataset for 1990 and 1995 into a single set of bin edges.
-light_per_area_all <- alltreedat[2:3] %>% map(~ .$light_received/.$crownarea) %>% unlist
-light_per_area_allclassified <- alltreedat_classified[2:3] %>% map(~ .$light_received/.$crownarea) %>% unlist
-
-light_per_area_fg <- fgdat %>%
-  map(~ map(.[2:3], function(z) z$light_received/z$crownarea) %>% unlist)
-
-light_per_area_bins_all <- logbin(x = na.omit(light_per_area_all), n = numbins)
-light_per_area_bins_allclassified <- logbin(x = na.omit(light_per_area_allclassified), n = numbins)
-light_per_area_bins_fg <- map(light_per_area_fg, ~ logbin(x = na.omit(.), n = numbins))
 
 indivprodperareabin_alltree_2census <- binprod(dat = alltreedat_norecruits[2:3], bindat = light_per_area_bins_all)
 indivprodperareabin_allclassified_2census <- binprod(dat = alltreedat_classified_norecruits[2:3], bindat = light_per_area_bins_allclassified)
@@ -262,12 +200,6 @@ totalprodbin_byyear_bydiam <- fgdat %>%
 
 densitybin_byyear_bydiam <- fgdat %>%
   map(~ map(.[-1], function(z) logbin_setedges(x = z$dbh_corr, y = NULL, edges = dbhbin_allclassified)))
-
-totalprodbin_byyear_bylight <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$light_received/z$crownarea, y = z$production_imputed1, edges = light_per_area_bins_allclassified)))
-
-densitybin_byyear_bylight <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$light_received/z$crownarea, y = NULL, edges = light_per_area_bins_allclassified)))
 
 # pioneer to breeder by diameter (fg2 to fg4)
 breeder_stats_bydiam <- tibble(fg_a_prod = totalprodbin_byyear_bydiam[[2]],
@@ -314,46 +246,6 @@ breeder_stats_bydiam_5census <- breeder_stats_bydiam %>%
             density_ratio_max = max(breeder_density_ratio),
             mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
-
-
-# pioneer to breeder by light received per unit crown area (fg2 to fg4)
-breeder_stats_bylight <- tibble(fg_a_prod = totalprodbin_byyear_bylight[[2]],
-                                fg_b_prod = totalprodbin_byyear_bylight[[4]],
-                                fg_a_dens = densitybin_byyear_bylight[[2]],
-                                fg_b_dens = densitybin_byyear_bylight[[4]],
-                                year = c(1990,1995)) %>%
-  pmap(function(fg_a_prod, fg_b_prod, fg_a_dens, fg_b_dens, year) 
-    data.frame(bin = 1:numbins,
-               year = year,
-               breeder_production_ratio = fg_a_prod$bin_value / fg_b_prod$bin_value,
-               breeder_density_ratio = fg_a_dens$bin_value / fg_b_dens$bin_value,
-               n_individuals = pmin(fg_a_dens$bin_count, fg_b_dens$bin_count))) %>%
-  bind_rows %>%
-  mutate_if(is.double, ~ if_else(is.finite(.x), .x, as.numeric(NA)))
-
-breeder_stats_bylight_byyear <- breeder_stats_bylight %>%
-  select(-bin) %>%
-  cbind(densitybin_byyear_bylight[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
-
-breeder_stats_bylight_2census <- breeder_stats_bylight %>% 
-  filter(year %in% c(1990, 1995)) %>%
-  group_by(bin) %>%
-  summarize(production_ratio_mean = mean(breeder_production_ratio),
-            density_ratio_mean = mean(breeder_density_ratio),
-            production_ratio_min = min(breeder_production_ratio),
-            production_ratio_max = max(breeder_production_ratio),
-            density_ratio_min = min(breeder_density_ratio),
-            density_ratio_max = max(breeder_density_ratio),
-            mean_n_individuals = min(n_individuals)) %>%
-  cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
-
-breederscore_bin_bylight_2census <- binscore(dat = alltreedat[2:3], bindat = light_per_area_bins_allclassified, score_column = 'X2', class_column = 'light_area')
-breederscore_bin_bylight_byyear <- alltreedat[2:3] %>%
-  map2_dfr(c(1990, 1995), function(x, y) {
-    x <- x %>% filter(!is.na(X2), !is.na(light_received), !is.na(crownarea))
-    data.frame(year = y, cloudbin_across_years(dat_values = x$X2, dat_classes = (x$light_received/x$crownarea), edges = light_per_area_bins_allclassified, mean = 'arithmetic', n_census = 1))
-  }) %>%
-  select(-mean_n_individuals)
 
 
 # Fast to slow by diameter (fg1 to fg3)
@@ -403,51 +295,12 @@ fastslow_stats_bydiam_5census <- fastslow_stats_bydiam %>%
             mean_n_individuals = min(n_individuals)) %>%
   cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
 
-# Fast to slow by light received per unit crown area (fg1 to fg3)
-fastslow_stats_bylight <- tibble(fg_a_prod = totalprodbin_byyear_bylight[[1]],
-                                 fg_b_prod = totalprodbin_byyear_bylight[[3]],
-                                 fg_a_dens = densitybin_byyear_bylight[[1]],
-                                 fg_b_dens = densitybin_byyear_bylight[[3]],
-                                 year = c(1990,1995)) %>%
-  pmap(function(fg_a_prod, fg_b_prod, fg_a_dens, fg_b_dens, year) 
-    data.frame(bin = 1:numbins,
-               year = year,
-               fastslow_production_ratio = fg_a_prod$bin_value / fg_b_prod$bin_value,
-               fastslow_density_ratio = fg_a_dens$bin_value / fg_b_dens$bin_value,
-               n_individuals = pmin(fg_a_dens$bin_count, fg_b_dens$bin_count))) %>%
-  bind_rows %>%
-  mutate_if(is.double, ~ if_else(is.finite(.x), .x, as.numeric(NA)))
-
-fastslow_stats_bylight_byyear <- fastslow_stats_bylight %>%
-  select(-bin) %>%
-  cbind(densitybin_byyear_bylight[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
-
-fastslow_stats_bylight_2census <- fastslow_stats_bylight %>% 
-  filter(year %in% c(1990, 1995)) %>%
-  group_by(bin) %>%
-  summarize(production_ratio_mean = mean(fastslow_production_ratio),
-            density_ratio_mean = mean(fastslow_density_ratio),
-            production_ratio_min = min(fastslow_production_ratio),
-            production_ratio_max = max(fastslow_production_ratio),
-            density_ratio_min = min(fastslow_density_ratio),
-            density_ratio_max = max(fastslow_density_ratio),
-            mean_n_individuals = min(n_individuals)) %>%
-  cbind(densitybin_byyear_bydiam[[1]][[1]][,c('bin_midpoint', 'bin_min', 'bin_max')]) 
-
-fastslowscore_bin_bylight_2census <- binscore(dat = alltreedat[2:3], bindat = light_per_area_bins_allclassified, score_column = 'X1', class_column = 'light_area')
-fastslowscore_bin_bylight_byyear <- alltreedat[2:3] %>%
-  map2_dfr(c(1990, 1995), function(x, y) {
-    x <- x %>% filter(!is.na(X1), !is.na(light_received), !is.na(crownarea))
-    data.frame(year = y, cloudbin_across_years(dat_values = x$X1, dat_classes = (x$light_received/x$crownarea), edges = light_per_area_bins_allclassified, mean = 'arithmetic', n_census = 1))
-  }) %>%
-  select(-mean_n_individuals)
-
 # Export binned data
 
 fpdata <- 'data/data_binned'
 
 # Multiple year bins
-file_names <- c('densitybin_5census', 'indivproductionbin_5census', 'totalproductionbin_5census', 'crownareabin_2census', 'lightreceivedbin_2census', 'indivprodperareabin_2census', 'breeder_stats_bydiam_2census',  'breederscore_bin_bydiam_2census', 'breeder_stats_bylight_2census', 'breederscore_bin_bylight_2census', 'fastslow_stats_bydiam_2census', 'fastslowscore_bin_bydiam_2census', 'fastslow_stats_bylight_2census', 'fastslowscore_bin_bylight_2census','fastslow_stats_bydiam_5census','breeder_stats_bydiam_5census')
+file_names <- c('densitybin_5census', 'indivproductionbin_5census', 'totalproductionbin_5census', 'crownareabin_2census','indivprodperareabin_2census', 'breeder_stats_bydiam_2census',  'breederscore_bin_bydiam_2census',  'fastslow_stats_bydiam_2census', 'fastslowscore_bin_bydiam_2census','fastslow_stats_bydiam_5census','breeder_stats_bydiam_5census')
 
 for (i in file_names) {
   write.csv(get(i), file=file.path(fpdata, paste0(i,'.csv')), row.names = FALSE)
@@ -456,7 +309,7 @@ for (i in file_names) {
 save(list = file_names, file = file.path(fpdata, 'bin_object_multipleyear.RData'))
 
 # Single year bins
-file_names <- c('densitybin_byyear', 'indivproductionbin_byyear', 'totalproductionbin_byyear', 'breeder_stats_bydiam_byyear', 'breederscore_bin_bydiam_byyear', 'breeder_stats_bylight_byyear', 'breederscore_bin_bylight_byyear', 'fastslow_stats_bydiam_byyear', 'fastslowscore_bin_bydiam_byyear', 'fastslow_stats_bylight_byyear', 'fastslowscore_bin_bylight_byyear') 
+file_names <- c('densitybin_byyear', 'indivproductionbin_byyear', 'totalproductionbin_byyear', 'breeder_stats_bydiam_byyear', 'breederscore_bin_bydiam_byyear', 'fastslow_stats_bydiam_byyear', 'fastslowscore_bin_bydiam_byyear') 
 
 for (i in file_names) {
   write.csv(get(i), file=file.path(fpdata, paste0(i,'.csv')), row.names = FALSE)
@@ -465,5 +318,5 @@ for (i in file_names) {
 save(list = file_names, file = file.path(fpdata, 'bin_object_singleyear.RData'))
 
 
-save(crownareabins1995, crownvolumebins1995, lightreceivedbins1995, lightperareabins1995, lightpervolumebins1995, leafareabins1995, lightcapturedbins1995,
+save(crownareabins1995, crownvolumebins1995, leafareabins1995,
      file = 'data/data_binned/area_and_volume_bins_1995.RData')
