@@ -22,28 +22,6 @@ load('ForestLight/data/rawdataobj_withimputedproduction.RData')
 binedgedata <- densitybin_byyear %>% filter(fg == 'all', year == 1995) 
 area_core <- 42.84
 
-# crown volume and leaf area bins 
-totalvolbins_all <- with(alltree_light_95, logbin_setedges(x = dbh_corr, y = crownvolume, edges = binedgedata))
-totalleafareabins_all <- with(alltree_light_95, logbin_setedges(x = dbh_corr, y = leaf_area, edges = binedgedata))
-
-totalvolbins_fg <- alltree_light_95 %>%
-  mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
-  group_by(fg) %>%
-  do(logbin_setedges(x = .$dbh_corr, y = .$crownvolume, edges = binedgedata)) %>%
-  ungroup %>%
-  rbind(data.frame(fg = 'all', totalvolbins_all)) %>%
-  mutate(bin_value = bin_value / area_core, year = 1995)
-totalleafareabins_fg <- alltree_light_95 %>%
-  mutate(fg = if_else(!is.na(fg), paste0('fg',fg), 'unclassified')) %>%
-  group_by(fg) %>%
-  do(logbin_setedges(x = .$dbh_corr, y = .$leaf_area, edges = binedgedata)) %>%
-  ungroup %>%
-  rbind(data.frame(fg = 'all', totalleafareabins_all)) %>%
-  mutate(bin_value = bin_value / area_core, year = 1995)
-
-write.csv(totalvolbins_fg, file.path(fp_out, 'obs_totalvol.csv'), row.names = FALSE)
-write.csv(totalleafareabins_fg, file.path(fp_out, 'obs_totalleafarea.csv'), row.names = FALSE)
-
 # Observed individual production
 obs_indivprod_df <- map(alltreedat[-1],
                          function(x) with(x %>% filter(!recruit), cloudbin_across_years(dat_values = production, dat_classes = dbh_corr, edges = binedgedata, n_census = 1)))
@@ -130,52 +108,6 @@ write.csv(fitted_indivprod, file.path(fp_out, 'fitted_indivprod.csv'), row.names
 write.csv(fitted_totalprod, file.path(fp_out, 'fitted_totalprod.csv'), row.names = FALSE)
 
 
-
-#################
-# total volume scaling
-
-library(dplyr)
-
-ci_df <- read.csv('finalcsvs/volume_piecewise_ci_by_fg.csv', stringsAsFactors = FALSE)
-area_core <- 42.84
-
-ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
-
-cf_volume <- read_csv('finalcsvs/volume_piecewise_cf_by_fg.csv') %>% 
-  select(prod_model, fg, q50) %>% 
-  rename(corr_factor = q50) %>%
-  mutate(fg = if_else(fg == 'alltree', 'all', fg))
-
-fitted_totalvol <- ci_df %>%
-  filter(variable == 'total_crown_volume_fitted') %>%
-  select(-variable) 
-
-fitted_totalvol <- fitted_totalvol %>%
-  left_join(cf_volume) %>%
-  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
-
-write.csv(fitted_totalvol, file.path(fp_out, 'fitted_totalvol.csv'), row.names = FALSE)
-
-## Leaf area
-ci_df <- read.csv('finalcsvs/leafarea_piecewise_ci_by_fg.csv', stringsAsFactors = FALSE)
-area_core <- 42.84
-
-ci_df$fg[ci_df$fg == 'alltree'] <- 'all'
-
-cf_leafarea <- read_csv('finalcsvs/leafarea_piecewise_cf_by_fg.csv') %>% 
-  select(prod_model, fg, q50) %>% 
-  rename(corr_factor = q50) %>%
-  mutate(fg = if_else(fg == 'alltree', 'all', fg))
-
-fitted_totalleafarea <- ci_df %>%
-  filter(variable == 'total_leaf_area_fitted') %>%
-  select(-variable) 
-
-fitted_totalleafarea <- fitted_totalleafarea %>%
-  left_join(cf_leafarea) %>%
-  mutate_at(vars(starts_with('q')), ~ . * (corr_factor/area_core))
-
-write.csv(fitted_totalleafarea, file.path(fp_out, 'fitted_totalleafarea.csv'), row.names = FALSE)
 
 # Diameter growth plots ---------------------------------------------------
 

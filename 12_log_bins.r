@@ -126,69 +126,6 @@ totalproductionbin_byyear <- rbind(
 totalproductionbin_5census <- cbind(fg = rep(group_names, each = numbins), 
                                     rbind(totalprodbin_all_5census, totalprodbin_allclassified_5census, do.call('rbind', totalprodbin_fg_5census)))
 
-# Leaf area and crown area
-# 1990 and 1995 only
-
-## crown area
-crownareabin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownarea, edges = dbhbin_all))
-crownareabin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownarea, edges = dbhbin_allclassified))
-
-crownareabin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$crownarea, edges = dbhbin_allclassified)))
-
-crownareabin_all_2census <- bin_across_years(crownareabin_alltree_byyear)
-crownareabin_allclassified_2census <- bin_across_years(crownareabin_allclassified_byyear)
-crownareabin_fg_2census <- lapply(crownareabin_fg_byyear, bin_across_years)
-
-crownareabin_2census <- cbind(fg = rep(group_names, each = numbins), 
-                              rbind(crownareabin_all_2census, crownareabin_allclassified_2census, do.call('rbind', crownareabin_fg_2census)))
-
-## crown volume
-crownvolumebin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownvolume, edges = dbhbin_all))
-crownvolumebin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownvolume, edges = dbhbin_allclassified))
-
-crownvolumebin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$crownvolume, edges = dbhbin_allclassified)))
-
-crownvolumebin_all_2census <- bin_across_years(crownvolumebin_alltree_byyear)
-crownvolumebin_allclassified_2census <- bin_across_years(crownvolumebin_allclassified_byyear)
-crownvolumebin_fg_2census <- lapply(crownvolumebin_fg_byyear, bin_across_years)
-
-crownvolumebin_2census <- cbind(fg = rep(group_names, each = numbins), 
-                                rbind(crownvolumebin_all_2census, crownvolumebin_allclassified_2census, do.call('rbind', crownvolumebin_fg_2census)))
-
-## leaf area
-leafareabin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$leaf_area, edges = dbhbin_all))
-leafareabin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$leaf_area, edges = dbhbin_allclassified))
-
-leafareabin_fg_byyear <- fgdat %>%
-  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$leaf_area, edges = dbhbin_allclassified)))
-
-leafareabin_all_2census <- bin_across_years(leafareabin_alltree_byyear)
-leafareabin_allclassified_2census <- bin_across_years(leafareabin_allclassified_byyear)
-leafareabin_fg_2census <- lapply(leafareabin_fg_byyear, bin_across_years)
-
-leafareabin_2census <- cbind(fg = rep(group_names, each = numbins), 
-                                rbind(leafareabin_all_2census, leafareabin_allclassified_2census, do.call('rbind', leafareabin_fg_2census)))
-
-## Combine the individual 1995 bins to data frames and then write them to R object.
-crownareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', crownareabin_allclassified_byyear[[2]]),
-                           map2_dfr(crownareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-crownvolumebins1995 <- rbind(data.frame(year = 1995, fg = 'all', crownvolumebin_allclassified_byyear[[2]]),
-                             map2_dfr(crownvolumebin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-leafareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', leafareabin_allclassified_byyear[[2]]),
-                          map2_dfr(leafareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
-
-# Production per meter squared of crown area.
-# Divide production by crown area and bin (1990 and 1995)
-
-indivprodperareabin_alltree_2census <- binprod(dat = alltreedat_norecruits[2:3], bindat = light_per_area_bins_all)
-indivprodperareabin_allclassified_2census <- binprod(dat = alltreedat_classified_norecruits[2:3], bindat = light_per_area_bins_allclassified)
-indivprodperareabin_fg_2census <- map2(fgdat_norecruits, light_per_area_bins_fg, ~ binprod(dat = .x[2:3], bindat = .y))
-
-indivprodperareabin_2census <- cbind(fg = rep(group_names, each = numbins), 
-                                     rbind(indivprodperareabin_alltree_2census, indivprodperareabin_allclassified_2census, do.call('rbind', indivprodperareabin_fg_2census)))
-
 # Figure 5 ratio binning
 # Previously we had shade:gap ratio of both production and density by light received bin, as well as average shade score for each light bin.
 # This was repeated for diameter bins.
@@ -300,7 +237,7 @@ fastslow_stats_bydiam_5census <- fastslow_stats_bydiam %>%
 fpdata <- 'data/data_binned'
 
 # Multiple year bins
-file_names <- c('densitybin_5census', 'indivproductionbin_5census', 'totalproductionbin_5census', 'crownareabin_2census','indivprodperareabin_2census', 'breeder_stats_bydiam_2census',  'breederscore_bin_bydiam_2census',  'fastslow_stats_bydiam_2census', 'fastslowscore_bin_bydiam_2census','fastslow_stats_bydiam_5census','breeder_stats_bydiam_5census')
+file_names <- c('densitybin_5census', 'indivproductionbin_5census', 'totalproductionbin_5census', 'breeder_stats_bydiam_2census',  'breederscore_bin_bydiam_2census',  'fastslow_stats_bydiam_2census', 'fastslowscore_bin_bydiam_2census','fastslow_stats_bydiam_5census','breeder_stats_bydiam_5census')
 
 for (i in file_names) {
   write.csv(get(i), file=file.path(fpdata, paste0(i,'.csv')), row.names = FALSE)
@@ -317,6 +254,3 @@ for (i in file_names) {
 
 save(list = file_names, file = file.path(fpdata, 'bin_object_singleyear.RData'))
 
-
-save(crownareabins1995, crownvolumebins1995, leafareabins1995,
-     file = 'data/data_binned/area_and_volume_bins_1995.RData')
