@@ -27,6 +27,6 @@ install.packages('R_functions/forestscaling_0.1.tar.gz', repos = NULL, type = 's
 
 - Next, run scripts `01` through `06` to set up all needed files to run the Stan models. *Note that these scripts also process and create some data objects associated with light interception, leaf area, and crown volume. These do not appear in the analyses in the final published version of the manuscript but may be of interest.*
 - Next, fit the Stan models using the Bash shell commands in the file `cmdstan_calls.sh` (these were run on a compute cluster with Slurm software).
-- Finally, run scripts `07` through `18` to process, analyze, and visualize model output.
+- Finally, run scripts `07` through `19` to process, analyze, and visualize model output.
 
-*This README last updated by QDR on 06 December 2021*
+*This README last updated by QDR on 27 October 2022*
