@@ -17,7 +17,11 @@ bin_bounds <- fastslow_stats_bydiam_byyear[1:20, c('bin_midpoint', 'bin_min', 'b
 # Set up bin data structure.
 years <- seq(1990, 2010, by=5)
 
+# First is for doing each FG separately, next is for all combined.
 bin_fg_year <- expand_grid(year = years, fg = c(paste0('fg', 1:5), 'unclassified'), bin = 1:20) %>%
+  left_join(bin_bounds %>% mutate(bin = 1:20))
+
+bin_all_year <- expand_grid(year = years, bin = 1:20) %>%
   left_join(bin_bounds %>% mutate(bin = 1:20))
 
 # Concatenate data from the five relevant censuses 1990-2010
@@ -36,7 +40,19 @@ richness_bin_fg_year <- bin_fg_year %>%
     data.frame(richness = length(unique(sp_ids)),
                n_individuals = length(sp_ids),
                production = sum(dat_subset$production))
+  })) 
+
+richness_bin_all_year <- bin_all_year %>%
+  cbind(pmap_dfr(bin_all_year, function(year, bin_min, bin_max, ...) {
+    dat_subset <- dat[dat$year %in% year & dat$dbh_corr >= bin_min & dat$dbh_corr < bin_max, ]
+    sp_ids <- as.character(dat_subset$sp)
+    data.frame(richness = length(unique(sp_ids)),
+               n_individuals = length(sp_ids),
+               production = sum(dat_subset$production))
   })) %>%
+  mutate(fg = 'all')
+  
+richness_bin_fg_year <- bind_rows(richness_bin_fg_year, richness_bin_all_year) %>%
   mutate(richness_by_bin_width = richness / (bin_max - bin_min),
          abundance_by_bin_width = n_individuals / (bin_max - bin_min))
 
@@ -74,12 +90,24 @@ dat_mort <- map2_dfr(alltreedat, c(1985, years), function(x,y) {
 bin_fg_year <- expand_grid(year = seq(1985, 2005, by = 5), fg = c(paste0('fg', 1:5), 'unclassified'), bin = 1:20) %>%
   left_join(bin_bounds %>% mutate(bin = 1:20))
 
+bin_all_year <- expand_grid(year = seq(1985, 2005, by = 5), bin = 1:20) %>%
+  left_join(bin_bounds %>% mutate(bin = 1:20))
+
 bin_mort_year <- bin_fg_year %>%
   mutate(mortality = pmap_dbl(bin_fg_year, function(year, fg, bin_min, bin_max, ...) {
     dat_mort_subset <- dat_mort[dat_mort$fg %in% fg & dat_mort$year %in% year & dat_mort$dbh_corr >= bin_min & dat_mort$dbh_corr < bin_max, ]
     sum(dat_mort_subset$died)/nrow(dat_mort_subset)
   })) %>%
   mutate(year = year + 5)
+
+bin_mort_all_year <- bin_all_year %>%
+  mutate(mortality = pmap_dbl(bin_all_year, function(year, bin_min, bin_max, ...) {
+    dat_mort_subset <- dat_mort[dat_mort$year %in% year & dat_mort$dbh_corr >= bin_min & dat_mort$dbh_corr < bin_max, ]
+    sum(dat_mort_subset$died)/nrow(dat_mort_subset)
+  })) %>%
+  mutate(year = year + 5, fg = 'all')
+
+bin_mort_year <- bind_rows(bin_mort_year, bin_mort_all_year)
 
 # Join mortality bin to the other by-fg bin.
 additional_bins_fg_year <- richness_bin_fg_year %>% left_join(bin_mort_year)
