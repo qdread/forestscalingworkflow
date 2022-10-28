@@ -10,7 +10,7 @@ Life history scaling and the division of energy in forests. John M. Grady, Quent
 
 ## Contents
 
-- The root folder contains 21 numbered scripts that should be run in order to replicate all analysis presented in the main text and supplements of the manuscript.
+- The root folder contains 18 numbered scripts that should be run in order to replicate all analysis presented in the main text and supplements of the manuscript.
 - The `data` folder contains all raw data needed.
 - The `model_scripts` folder contains the Stan model files.
 - The `R_functions` folder contains the source code for the `forestscaling` package, needed to run the analysis, as well as an additional file containing needed functions.
@@ -18,15 +18,15 @@ Life history scaling and the division of energy in forests. John M. Grady, Quent
 
 ## Instructions
 
-- First, install the `forestscaling` R package which includes some functions and plotting themese needed to run the analysis R code.
+- First, install the `forestscaling` R package which includes some functions and plotting themes needed to run the analysis R code.
 The source file for the package is included in this repository. Install from source using this R command:
 
 ```
 install.packages('R_functions/forestscaling_0.1.tar.gz', repos = NULL, type = 'source')
 ```
 
-- Next, run scripts `01` through `06` to set up all needed files to run the Stan models.
+- Next, run scripts `01` through `06` to set up all needed files to run the Stan models. *Note that these scripts also process and create some data objects associated with light interception, leaf area, and crown volume. These do not appear in the analyses in the final published version of the manuscript but may be of interest.*
 - Next, fit the Stan models using the Bash shell commands in the file `cmdstan_calls.sh` (these were run on a compute cluster with Slurm software).
-- Finally, run scripts `07` through `21` to process, analyze, and visualize model output.
+- Finally, run scripts `07` through `19` to process, analyze, and visualize model output.
 
-*This README last updated by QDR on 06 December 2021*
+*This README last updated by QDR on 27 October 2022*
