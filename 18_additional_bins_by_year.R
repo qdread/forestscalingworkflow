@@ -54,7 +54,8 @@ richness_bin_all_year <- bin_all_year %>%
   
 richness_bin_fg_year <- bind_rows(richness_bin_fg_year, richness_bin_all_year) %>%
   mutate(richness_by_bin_width = richness / (bin_max - bin_min),
-         abundance_by_bin_width = n_individuals / (bin_max - bin_min))
+         abundance_by_bin_width = n_individuals / (bin_max - bin_min),
+         production_by_bin_width = production / (bin_max - bin_min))
 
 ### RICHNESS & ABUNDANCE RATIO BINS
 # Use the previous result and divide fast:slow (1/3) and pioneer:slow (2/3)
