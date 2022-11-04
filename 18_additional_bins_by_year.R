@@ -108,7 +108,8 @@ bin_mort_all_year <- bin_all_year %>%
   })) %>%
   mutate(year = year + 5, fg = 'all')
 
-bin_mort_year <- bind_rows(bin_mort_year, bin_mort_all_year)
+bin_mort_year <- bind_rows(bin_mort_year, bin_mort_all_year) %>%
+  mutate(mortality = -log(1-mortality)/5)
 
 # Join mortality bin to the other by-fg bin.
 additional_bins_fg_year <- richness_bin_fg_year %>% left_join(bin_mort_year)

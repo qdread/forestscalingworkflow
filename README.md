@@ -10,7 +10,7 @@ Life history scaling and the division of energy in forests. John M. Grady, Quent
 
 ## Contents
 
-- The root folder contains 18 numbered scripts that should be run in order to replicate all analysis presented in the main text and supplements of the manuscript.
+- The root folder contains 19 numbered scripts that should be run in order to replicate all analysis presented in the main text and supplements of the manuscript.
 - The `data` folder contains all raw data needed.
 - The `model_scripts` folder contains the Stan model files.
 - The `R_functions` folder contains the source code for the `forestscaling` package, needed to run the analysis, as well as an additional file containing needed functions.

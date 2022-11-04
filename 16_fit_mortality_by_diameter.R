@@ -3,6 +3,7 @@
 # Each nonlinear parameter has functional group as fixed effect
 # 17 Sep 2022
 
+# Modified 04 November 2022: Use consistent method for calculating mortality.
 
 # Setup -------------------------------------------------------------------
 
@@ -12,16 +13,30 @@ library(brms)
 library(tidybayes)
 library(ggplot2)
 library(tidyr)
+library(purrr)
 
-options(mc.cores = 4, brms.backend = 'cmdstanr', brms.file_refit = 'on_change')
+options(mc.cores = 4, brms.backend = 'cmdstanr', brms.file_refit = 'never')
 
-# Read mortality data and convert to Stan data list
-mort <- read_csv('data/data_forplotting/obs_mortalityindividuals.csv')
+load('data/rawdataobj_alternativecluster.r')
 
-mort_data <- mort %>%
-  filter(!fg %in% 'unclassified') %>%
-  mutate(died = alive == 0) %>%
-  select(fg, died, dbh)
+# Load 1995 bin data (to make sure we're using the same bin breaks as other figs)
+load('data/data_binned/bin_object_singleyear.RData')
+
+# Generate 1990->1995 mortality.
+dat_mort <- map2_dfr(alltreedat, seq(1985, 2010, by = 5), function(x,y) {
+  x %>%
+    select(treeID, sp, fg, dbh_corr) %>%
+    mutate(year = y)
+}) %>%
+  mutate(fg = if_else(is.na(fg), 'unclassified', paste0('fg', fg))) %>%
+  group_by(treeID) %>%
+  mutate(last_year = max(year)) %>% 
+  ungroup %>%
+  mutate(died = year == last_year)
+
+mort_data <- dat_mort %>%
+  filter(year == 1990, !fg %in% 'unclassified') %>%
+  select(fg, died, dbh = dbh_corr)
 
 
 # Fit model ---------------------------------------------------------------
@@ -41,39 +56,31 @@ mort_jcurve_fixef_fit <- brm(
     prior(normal(0, 2), nlpar = gamma)
   ),
   chains = 4, iter = 3000, warmup = 2000, seed = 27701,
-  file = '~/temp/forestlight/mort_jcurve_fixef_brmfit'
+  file = '~/temp/forestlight/mort_jcurve_fixef_brmfit_new'
 )
 
-# Postprocessing and plotting  -------------------------------------
+
+# Generate predicted values -----------------------------------------------
 
 # Read pre-created mortality bins for plotting to compare to fitted values
-mort_bins <- read_csv('data/data_forplotting/obs_mortalitybins.csv')
+binned_data <- read_csv('data/data_binned/additional_bins_fg_year.csv')
 
 # Prediction grid: dbh x fg
 # Limit ranges to the observed data points
-mort_max <- mort_bins %>%
-  filter((lived + died) > 20, variable %in% 'dbh', fg %in% paste0('fg', 1:5)) %>%
-  group_by(fg) %>%
+mort_max <- binned_data %>%
+  filter(abundance > 20, fg %in% paste0('fg', 1:5)) %>%
+  group_by(fg, year) %>%
   filter(bin_midpoint == max(bin_midpoint))
 
 pred_dat <- mort_max %>%
+  filter(year == 1995) %>%
   group_by(fg) %>%
   group_modify(~ data.frame(dbh = exp(seq(log(1), log(.$bin_midpoint), length.out = 101))))
 
 # Get expected values of posterior means (epred)
 jcurve_pred <- pred_dat %>%
-  add_epred_draws(mort_jcurve_fixef_fit)
-
-### Quick diag. plot
-ggplot(mort_bins %>% filter(variable == "dbh", fg %in% paste0('fg', 1:5), (lived+died) > 20), aes(x=bin_midpoint, y=mortality)) +
-  stat_lineribbon(aes(y = .epred, x = dbh), data = jcurve_pred) +
-  geom_point(aes(size = lived+died), color = 'gray40') +
-  facet_wrap(~ fg) + scale_x_log10(name = 'diameter (cm)') + scale_y_log10() + 
-  scale_size(name = 'individuals', range = c(1, 3), breaks = c(1000, 3000, 10000, 30000)) +
-  scale_fill_brewer(palette = 'Blues') + 
-  theme_bw() +
-  theme(legend.position = c(0.8, 0.2), strip.background = element_blank())
-
+  add_epred_draws(mort_jcurve_fixef_fit) %>%
+  mutate(.epred = -log(1-.epred)/5)
 
 # Generate parameter tables -----------------------------------------------
 
