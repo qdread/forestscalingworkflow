@@ -126,6 +126,108 @@ totalproductionbin_byyear <- rbind(
 totalproductionbin_5census <- cbind(fg = rep(group_names, each = numbins), 
                                     rbind(totalprodbin_all_5census, totalprodbin_allclassified_5census, do.call('rbind', totalprodbin_fg_5census)))
 
+# Total light received and crown area
+# 1990 and 1995 only
+
+## crown area
+crownareabin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownarea, edges = dbhbin_all))
+crownareabin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownarea, edges = dbhbin_allclassified))
+
+crownareabin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$crownarea, edges = dbhbin_allclassified)))
+
+crownareabin_all_2census <- bin_across_years(crownareabin_alltree_byyear)
+crownareabin_allclassified_2census <- bin_across_years(crownareabin_allclassified_byyear)
+crownareabin_fg_2census <- lapply(crownareabin_fg_byyear, bin_across_years)
+
+crownareabin_2census <- cbind(fg = rep(group_names, each = numbins), 
+                              rbind(crownareabin_all_2census, crownareabin_allclassified_2census, do.call('rbind', crownareabin_fg_2census)))
+
+## crown volume
+crownvolumebin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownvolume, edges = dbhbin_all))
+crownvolumebin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$crownvolume, edges = dbhbin_allclassified))
+
+crownvolumebin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$crownvolume, edges = dbhbin_allclassified)))
+
+crownvolumebin_all_2census <- bin_across_years(crownvolumebin_alltree_byyear)
+crownvolumebin_allclassified_2census <- bin_across_years(crownvolumebin_allclassified_byyear)
+crownvolumebin_fg_2census <- lapply(crownvolumebin_fg_byyear, bin_across_years)
+
+crownvolumebin_2census <- cbind(fg = rep(group_names, each = numbins), 
+                                rbind(crownvolumebin_all_2census, crownvolumebin_allclassified_2census, do.call('rbind', crownvolumebin_fg_2census)))
+
+## leaf area
+leafareabin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$leaf_area, edges = dbhbin_all))
+leafareabin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$leaf_area, edges = dbhbin_allclassified))
+
+leafareabin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$leaf_area, edges = dbhbin_allclassified)))
+
+leafareabin_all_2census <- bin_across_years(leafareabin_alltree_byyear)
+leafareabin_allclassified_2census <- bin_across_years(leafareabin_allclassified_byyear)
+leafareabin_fg_2census <- lapply(leafareabin_fg_byyear, bin_across_years)
+
+leafareabin_2census <- cbind(fg = rep(group_names, each = numbins), 
+                                rbind(leafareabin_all_2census, leafareabin_allclassified_2census, do.call('rbind', leafareabin_fg_2census)))
+
+## light received
+lightreceivedbin_alltree_byyear <- alltreedat[2:3] %>% map(~ with(filter(., !is.na(light_received)), logbin_setedges(x = dbh_corr, y = light_received, edges = dbhbin_all)))
+lightreceivedbin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ with(filter(., !is.na(light_received)), logbin_setedges(x = dbh_corr, y = light_received, edges = dbhbin_all)))
+
+lightreceivedbin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) with(filter(z, !is.na(light_received)), logbin_setedges(x = dbh_corr, y = light_received, edges = dbhbin_allclassified))))
+
+lightreceivedbin_all_2census <- bin_across_years(lightreceivedbin_alltree_byyear)
+lightreceivedbin_allclassified_2census <- bin_across_years(lightreceivedbin_allclassified_byyear)
+lightreceivedbin_fg_2census <- lapply(lightreceivedbin_fg_byyear, bin_across_years)
+
+lightreceivedbin_2census <- cbind(fg = rep(group_names, each = numbins), 
+                                  rbind(lightreceivedbin_all_2census, lightreceivedbin_allclassified_2census, do.call('rbind', lightreceivedbin_fg_2census)))
+
+## light captured (light received * fraction light captured)
+lightcapturedbin_alltree_byyear <- alltreedat[2:3] %>% map(~ with(filter(., !is.na(light_captured)), logbin_setedges(x = dbh_corr, y = light_captured, edges = dbhbin_all)))
+lightcapturedbin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ with(filter(., !is.na(light_captured)), logbin_setedges(x = dbh_corr, y = light_captured, edges = dbhbin_all)))
+
+lightcapturedbin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) with(filter(z, !is.na(light_captured)), logbin_setedges(x = dbh_corr, y = light_captured, edges = dbhbin_allclassified))))
+
+lightcapturedbin_all_2census <- bin_across_years(lightcapturedbin_alltree_byyear)
+lightcapturedbin_allclassified_2census <- bin_across_years(lightcapturedbin_allclassified_byyear)
+lightcapturedbin_fg_2census <- lapply(lightcapturedbin_fg_byyear, bin_across_years)
+
+lightcapturedbin_2census <- cbind(fg = rep(group_names, each = numbins), 
+                                  rbind(lightcapturedbin_all_2census, lightcapturedbin_allclassified_2census, do.call('rbind', lightcapturedbin_fg_2census)))
+
+## light received per unit crown area
+lightperareabin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownarea, edges = dbhbin_all))
+lightperareabin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownarea, edges = dbhbin_all))
+
+lightperareabin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$light_received/z$crownarea, edges = dbhbin_allclassified)))
+
+## light received per unit crown volume
+lightpervolumebin_alltree_byyear <- alltreedat[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownvolume, edges = dbhbin_all))
+lightpervolumebin_allclassified_byyear <- alltreedat_classified[2:3] %>% map(~ logbin_setedges(x = .$dbh_corr, y = .$light_received/.$crownvolume, edges = dbhbin_all))
+
+lightpervolumebin_fg_byyear <- fgdat %>%
+  map(~ map(.[2:3], function(z) logbin_setedges(x = z$dbh_corr, y = z$light_received/z$crownvolume, edges = dbhbin_allclassified)))
+
+## Combine the individual 1995 bins to data frames and then write them to R object.
+crownareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', crownareabin_allclassified_byyear[[2]]),
+                           map2_dfr(crownareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
+crownvolumebins1995 <- rbind(data.frame(year = 1995, fg = 'all', crownvolumebin_allclassified_byyear[[2]]),
+                             map2_dfr(crownvolumebin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
+lightreceivedbins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightreceivedbin_allclassified_byyear[[2]]),
+                               map2_dfr(lightreceivedbin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
+lightperareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightperareabin_allclassified_byyear[[2]]),
+                              map2_dfr(lightperareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
+lightpervolumebins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightpervolumebin_allclassified_byyear[[2]]),
+                                map2_dfr(lightpervolumebin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
+leafareabins1995 <- rbind(data.frame(year = 1995, fg = 'all', leafareabin_allclassified_byyear[[2]]),
+                          map2_dfr(leafareabin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
+lightcapturedbins1995 <- rbind(data.frame(year = 1995, fg = 'all', lightcapturedbin_allclassified_byyear[[2]]),
+                               map2_dfr(lightcapturedbin_fg_byyear, group_names[3:8], ~ data.frame(year = 1995, fg = .y, .x[[2]])))
 # Figure 5 ratio binning
 # Previously we had shade:gap ratio of both production and density by light received bin, as well as average shade score for each light bin.
 # This was repeated for diameter bins.
@@ -254,3 +356,5 @@ for (i in file_names) {
 
 save(list = file_names, file = file.path(fpdata, 'bin_object_singleyear.RData'))
 
+save(crownareabins1995, crownvolumebins1995, lightreceivedbins1995, lightperareabins1995, lightpervolumebins1995, leafareabins1995, lightcapturedbins1995,
+     file = 'data/data_binned/area_and_volume_bins_1995.RData')
