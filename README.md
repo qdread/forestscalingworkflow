@@ -13,7 +13,7 @@ This is a repository containing all data and code necessary to reproduce the ana
 - The root folder contains 19 numbered scripts that should be run in order to replicate all analysis presented in the main text and supplements of the manuscript.
 - The `data` folder contains all raw data needed.
 - The `model_scripts` folder contains the Stan model files.
-- The `R_functions` folder contains the source code for the `forestscaling` package, needed to run the analysis, as well as an additional file containing needed functions.
+- The `R_functions` folder contains the source code for the `forestscaling` package, needed to run the analysis, as well as two additional file containing needed functions for model output extracting and plotting.
 - The `shell_scripts` folder contains files with shell commands needed to fit the Stan models.
 
 ## Instructions
@@ -29,4 +29,4 @@ install.packages('R_functions/forestscaling_0.1.tar.gz', repos = NULL, type = 's
 - Next, fit the Stan models using the Bash shell commands in the file `cmdstan_calls.sh` (these were run on a compute cluster with Slurm software).
 - Finally, run scripts `07` through `19` to process, analyze, and visualize model output.
 
-*This README last updated by QDR on 27 October 2023*
+*This README last updated by QDR on 08 December 2023*
