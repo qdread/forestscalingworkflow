@@ -62,7 +62,6 @@ theme_plant2 <- forestscaling::theme_plant() + theme(plot.margin=grid::unit(c(0,
 theme_plant <- forestscaling::theme_plant() + theme(plot.margin=grid::unit(c(0,0,0,0), "mm"), legend.position = "right", legend.text = element_text(size = 14 ), legend.key = element_blank())
 
 #---------------------------- Data ---------------------------- 
-load('data/rawdataobj_alternativecluster.R')
 fp <-'data/data_forplotting'
 
 for (i in dir(fp, pattern = 'obs_')) {
