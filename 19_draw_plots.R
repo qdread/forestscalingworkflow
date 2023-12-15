@@ -1,5 +1,5 @@
-# Clean plotting code using "packaged" functions
-# Plots all main and supplemental figures in forest scaling MS
+#--------Plots all main and supplemental figures in Grady et al's "Life history scaling in a tropical forest" ---------
+
 ########### ============== ##############
 ### WHICH MODEL FITS TO USE IN PLOTS ####
 ########### ============== ##############
@@ -23,7 +23,7 @@ library(rstan)
 library(lme4)
 library(sjstats)
 library(rstanarm)
-library(forestscaling) # Packaged all the functions and ggplot2 themes here! 
+library(forestscaling) # Packaged functions and ggplot2 themes here! 
 library(tidyverse)
 library(ggnewscale)
 
@@ -33,6 +33,16 @@ guild_fills_fg = c(fg1 = "#BFE046", fg2 =  "#267038", fg3 = "#27408b", fg4 = "#8
 
 guild_colors_all <- c("black", "#BFE046", "#267038", "#27408b", "#87Cefa", "gray")
 guild_colors_fg <- c("#BFE046", "#267038", "#27408b", "#87Cefa", "gray")
+
+slow_fast_fill <- c("#27408b", "#BFE046" ) 
+slow_tall_fill <- c("#27408b", "#267038" ) #'tall' is long-lived pioneer
+short_tall_fill <- c("#87Cefa", "#267038")  
+
+scale_slow_tall <- scale_fill_gradientn(colors = slow_tall_fill, trans = 'log')
+scale_slow_fast <- scale_fill_gradientn(colors = slow_fast_fill, trans = 'log')
+
+scale_short_tall  <- scale_fill_gradientn(colors = short_tall_fill) #'short' is short-lived recruiter
+scale_slow_fast2 <- scale_fill_gradientn(colors = slow_fast_fill) #no log for PCA values
 
 fg_labels <- c("fg1", "fg2","fg3", "fg4", "fg5")
 
@@ -48,21 +58,14 @@ grob_slow <- grobTree(textGrob("Slow", x = 0.04, y = 0.74,  hjust = 0, gp = gpar
 grob_short <- grobTree(textGrob("Short", x = 0.04, y = 0.67,  hjust = 0, gp = gpar(col = "#87Cefa", fontsize = 15, fontface = "italic"))) 
 grob_all <- grobTree(textGrob("All", x = 0.04, y = 0.60,  hjust = 0, gp = gpar(col = "black", fontsize = 15, fontface = "italic"))) 
 
-fast_slow_fill <- c("#27408b", "#BFE046" )
-short_tall_fill <- c("#27408b", "#267038")  #74B8CC; 9FAF65
-
-scale_tall_slow <- scale_fill_gradientn(colours = short_tall_fill, trans = 'log')
-scale_fast_slow <- scale_fill_gradientn(colours = fast_slow_fill,trans = 'log')
-
-scale_tall_slow2 <- scale_fill_gradientn(colours = short_tall_fill)
-scale_fast_slow2 <- scale_fill_gradientn(colours = fast_slow_fill) 
 
 # To add back the legend
 theme_plant2 <- forestscaling::theme_plant() + theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
+
+#adjusting theme
 theme_plant <- forestscaling::theme_plant() + theme(plot.margin=grid::unit(c(0,0,0,0), "mm"), legend.position = "right", legend.text = element_text(size = 14 ), legend.key = element_blank())
 
 #---------------------------- Data ---------------------------- 
-load('data/rawdataobj_alternativecluster.R')
 fp <-'data/data_forplotting'
 
 for (i in dir(fp, pattern = 'obs_')) {
@@ -98,7 +101,7 @@ source('R_functions/extra_plot_functions.R') # add new plotting themes
 ###################################################################################
 
 #----------------------------------------------------------------------------------
-#--------------------------   Abundance          ----------------------------------
+#--------------------------   Fig 2A: Abundance          ----------------------------------
 #----------------------------------------------------------------------------------
 
 #--error bars
@@ -121,15 +124,14 @@ dens_range
                 x_breaks = c(1, 10, 100),
                 y_labels = c(0.001, 0.1, 10,1000),
                 y_breaks = c(0.001, 0.1,  10, 1000)))
-
 p1 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
 grid.newpage()
 grid.draw(p1)
 
 
-#------------------ supplemental abundance range across census years -------------
-
-
+#----------------------------------------------------------------------------------
+#--------------------------   Fig S3: Abundance across census years ---------------
+#----------------------------------------------------------------------------------
 (p <- plot_dens2(year_to_plot = 1995,
                 fg_names = c('fg1','fg2','fg3','fg4','fg5','all'),
                 model_fit = DENS,
@@ -145,7 +147,7 @@ grid.newpage()
 grid.draw(p1)
 
 #----------------------------------------------------------------------------------
-#--------------------------   Fig. 2 Richness  ------------------------------------
+#--------------------------   Fig. 2C Richness  ------------------------------------
 #----------------------------------------------------------------------------------
 
 # filter fitted sizes by binned sizes
@@ -179,16 +181,11 @@ rich_range <- binned_data %>%
 
 
 #---- Plot Richness ------
-
-
 (p <- ggplot() + 
     theme_plant() +
-    scale_x_log10(name = 'Stem Diameter (cm)',
-                  limit = c(.9, 160)) + 
-    scale_y_log10(labels = signif,
-                  limits = c(0.007, 20000),
-                  position = "left",
-                  name = expression(paste("Richness (cm"^-1, ")"))) + #name = expression(paste("Richness (50 ha"^-1," cm"^-1, " )"))) +
+    scale_x_log10(name = 'Stem Diameter (cm)', limit = c(.9, 160)) + 
+    scale_y_log10(labels = signif, limits = c(0.007, 20000), position = "left",
+                  name = expression(paste("Richness (cm"^-1, ")"))) +
     scale_fill_manual(values = guild_fills_all) +
     scale_color_manual(values = guild_colors_all) +
     geom_ribbon(data = fitted_richnessbydiameter_filtered  %>% 
@@ -201,7 +198,7 @@ rich_range <- binned_data %>%
     geom_errorbar(data = rich_range %>%  arrange(desc(fg)), aes(x = bin_midpoint, ymin = min, ymax = max, color = fg ), width = 0) +
     geom_point(data = binned_data %>% 
                  arrange(desc(fg)) %>%
-                 filter(!fg %in% 'unclassified', abundance >= 20) %>% #n_individuals >= 20
+                 filter(!fg %in% 'unclassified', abundance >= 20) %>% 
                  filter(year == "1995") %>%
                  arrange(desc(fg)), 
                aes(x = bin_midpoint, y = richness_by_bin_width, fill = fg, color = fg),
@@ -213,7 +210,10 @@ grid.newpage()
 grid.draw(p1)
 
 
-#---------- supplemental - no points ------------
+#----------------------------------------------------------------------------------
+#--------------------------   Fig. S3 Richness  across census years ---------------
+#----------------------------------------------------------------------------------
+
 (p <- ggplot() + 
    theme_plant() +
    scale_x_log10(name = 'Stem Diameter (cm)',
@@ -221,7 +221,7 @@ grid.draw(p1)
    scale_y_log10(labels = signif,
                  limits = c(0.007, 20000),
                  position = "left",
-                 name = expression(paste("Richness (cm"^-1, ")"))) + #name = expression(paste("Richness (50 ha"^-1," cm"^-1, " )"))) +
+                 name = expression(paste("Richness (cm"^-1, ")"))) +
    scale_fill_manual(values = guild_fills_all) +
    scale_color_manual(values = guild_colors_all) +
    geom_line(data = fitted_richnessbydiameter_filtered  %>% 
@@ -237,7 +237,7 @@ grid.draw(p1)
 
 
 #----------------------------------------------------------------------------------
-#--------------------------   Fig. 2. Productivity  ---------------------------------------
+#--------------------------   Fig. 2E. Productivity  ------------------------------
 #----------------------------------------------------------------------------------
 
 obs_totalprod <- obs_totalprod %>%
@@ -271,7 +271,10 @@ grid.newpage()
 grid.draw(p1)
 
 
-##------------ supplemental: just the ranges across censuses ----------------
+#----------------------------------------------------------------------------------
+#-------------------  Fig. S#. Productivity across census years -------------------
+#----------------------------------------------------------------------------------
+
 p <- plot_totalprod2(year_to_plot = 1995,
                     fg_names = c('fg1','fg2','fg3', 'fg4', 'fg5', 'all'),
                     model_fit_density = DENS, 
@@ -291,15 +294,14 @@ grid.draw(p1)
 
 
 ########################################################################
-######################   Fig 2 B,D,E: Ratios     ####################################
+######################   Fig 2 B,D,E: Ratios     #######################
 ########################################################################
 
 
 
 #----------------------------------------------------------------------------------
-#--------------------------  Abundance Ratio -------------------------------------------
+#--------------------------   Fig. 2B Relative Abundance  -------------------------
 #----------------------------------------------------------------------------------
-#---- LL pioneer vs slow abundance ------
 
 abun_ratio_pioneerslow_range <- ratios %>%
   group_by(bin_midpoint) %>%
@@ -319,23 +321,24 @@ abun_data = ratios %>% filter(min_n_individuals_pioneerslow >= 20, min_n_individ
 
 abun_max = max(abun_data$bin_midpoint)
 
-  
+#------- Fig 2B-  
 (abun_ratio  <- ggplot() + 
     theme_plant() + theme_no_x() + 
     scale_x_log10(limits = c(.9, 100), breaks = c(1, 10, 100), 
                   position = "bottom", 
                   expression(paste('Stem Diameter (cm)'))) + 
-    scale_y_log10(labels = signif, # breaks = c(0.03, 0.1, 1, 0.3, 1, 3), #limits = c(0.03, 6),
+    scale_y_log10(labels = signif, 
                   breaks = c(0.01, 0.1, 1, 10), limits = c(0.03, 10),
                   position = "right", name = expression("Abundance Ratio")) + 
     stat_smooth(data = ratios %>% filter(min_n_individuals_pioneerslow >= 20, year == "1995"),
                 aes(x =  bin_midpoint, y = abundance_ratio_pioneerslow, fill = abundance_ratio_pioneerslow),
                 method = "lm", color = "black", alpha = 0.2 ) +
-    geom_errorbar(data = abun_ratio_pioneerslow_range  %>% filter(bin_midpoint <= abun_max), aes(x = bin_midpoint, ymin = min, ymax = max), width = 0, color = "black") +
+    geom_errorbar(data = abun_ratio_pioneerslow_range  %>% filter(bin_midpoint <= abun_max), 
+                  aes(x = bin_midpoint, ymin = min, ymax = max), width = 0, color = "black") +
     geom_point(data = ratios %>% filter(min_n_individuals_pioneerslow >= 20, year == "1995"),
                aes(x =  bin_midpoint, y = abundance_ratio_pioneerslow, fill = abundance_ratio_pioneerslow),
                shape = 21, stroke = 0.5, size = 4, color = "black") +
-    scale_tall_slow  +
+    scale_slow_tall  +
     new_scale_fill() +
     stat_smooth(data = ratios %>% filter(min_n_individuals_fastslow >= 20, year == "1995"),
                 aes(x =  bin_midpoint, y = abundance_ratio_fastslow, fill = abundance_ratio_fastslow),
@@ -344,7 +347,7 @@ abun_max = max(abun_data$bin_midpoint)
     geom_point(data = ratios %>% filter(min_n_individuals_fastslow >= 20, year == "1995"),
                aes(x =  bin_midpoint, y = abundance_ratio_fastslow, fill = abundance_ratio_fastslow),
                shape = 21, stroke = 0.5, size = 4, color = "black") +
-    scale_fast_slow 
+    scale_slow_fast 
 )
 
 
@@ -354,10 +357,8 @@ grid.draw(p1)
 
 
 #----------------------------------------------------------------------------------
-#--------------------------   Richness Ratio -------------------------------------------
+#--------------------------  Fig 2D:  Richness Ratio -----------------------------
 #----------------------------------------------------------------------------------
-
-#------------------ Plot Richness tall slow  ~ diameter -----------
 ratio_pionslow_range <- ratios %>%
   filter(min_n_individuals_pioneerslow >= 20) %>%
   group_by(bin_midpoint) %>%
@@ -381,7 +382,7 @@ rich_max = max(rich_data$bin_midpoint)
     scale_x_log10(limits = c(.9, 100), breaks = c(1, 10, 100), 
                   position = "bottom", expression(paste('Stem Diameter (cm)'))) + 
     scale_y_log10(labels = signif,
-                  breaks = c(0.03, 0.1, 1, 0.3, 1, 3), limits = c(0.3, 4),
+                  breaks = c(0.01, 0.1, 1, 10), limits = c(0.03, 10),
                   position = "right", name = expression("Richness Ratio")) + 
     theme_plant() +
     stat_smooth(data = ratios %>% filter(min_n_individuals_pioneerslow >= 20, year == "1995"),
@@ -391,7 +392,7 @@ rich_max = max(rich_data$bin_midpoint)
     geom_point(data = ratios %>% filter(min_n_individuals_pioneerslow >= 20, year == "1995"),
                aes(x =  bin_midpoint, y = richness_ratio_pioneerslow, fill = richness_ratio_pioneerslow),
                shape = 21, stroke = 0.5, size = 4, color = "black") +
-    scale_tall_slow  +
+    scale_slow_tall  +
     new_scale_fill() +
     stat_smooth(data = ratios %>% filter(min_n_individuals_fastslow >= 20, year == "1995"),
                 aes(x =  bin_midpoint, y = richness_ratio_fastslow, fill = richness_ratio_fastslow),
@@ -400,7 +401,7 @@ rich_max = max(rich_data$bin_midpoint)
     geom_point(data = ratios %>% filter(min_n_individuals_fastslow >= 20, year == "1995"),
                aes(x =  bin_midpoint, y = richness_ratio_fastslow, fill = richness_ratio_fastslow),
                shape = 21, stroke = 0.5, size = 4, color = "black") +
-    scale_fast_slow + theme_no_x()
+    scale_slow_fast + theme_no_x()
 )
 
 p1 <- set_panel_size(rich_ratio, width=unit(10.25,"cm"), height=unit(8,"cm"))
@@ -409,7 +410,7 @@ grid.draw(p1)
 
 
 #----------------------------------------------------------------------------------
-#--------------------------  Productivity  Ratio -------------------------------------------
+#--------------------------  Fig 2F: Productivity  Ratio --------------------------
 #----------------------------------------------------------------------------------
 #---- LL pioneer vs slow abundance ------
 prod_ratio_pioneerslow_range <- ratios %>%
@@ -432,11 +433,11 @@ prod_max = max(prod_data$bin_midpoint)
 
 (prod_ratio  <-
     ggplot() + theme_plant() +
-    scale_tall_slow  +
+    scale_slow_tall  +
     scale_x_log10(limits = c(.9, 100), breaks = c(1, 10, 100), 
                   position = "bottom", 
                   expression(paste('Stem Diameter (cm)'))) + 
-    scale_y_log10(labels = signif, # breaks = c(0.03, 0.1, 1, 0.3, 1, 3), #limits = c(0.03, 6),
+    scale_y_log10(labels = signif, 
                   breaks = c(0.01, 0.1, 1, 10), limits = c(0.03, 10),
                   position = "right", name = expression("Productivity Ratio")) + 
     stat_smooth(data = ratios %>%  filter(min_n_individuals_pioneerslow >= 20, year == "1995"),
@@ -447,7 +448,7 @@ prod_max = max(prod_data$bin_midpoint)
                aes(x =  bin_midpoint, y = production_ratio_pioneerslow, fill = production_ratio_pioneerslow),
                shape = 21, stroke = 0.5, size = 4, color = "black") +
     new_scale_fill() +
-    scale_fast_slow +
+    scale_slow_fast +
     stat_smooth(data = ratios %>% 
                   filter(min_n_individuals_fastslow >= 20, year == "1995"),
                 aes(x =  bin_midpoint, y = production_ratio_fastslow, fill = production_ratio_fastslow),
@@ -456,9 +457,7 @@ prod_max = max(prod_data$bin_midpoint)
     geom_point(data = ratios %>% 
                  filter(min_n_individuals_fastslow >= 20, year == "1995"),
                aes(x =  bin_midpoint, y = production_ratio_fastslow, fill = production_ratio_fastslow),
-               shape = 21, stroke = 0.5, 
-               size = 4, 
-               color = "black") 
+               shape = 21, stroke = 0.5, size = 4, color = "black") 
 )
 
 
@@ -468,7 +467,7 @@ grid.draw(p1)
 
 
 ##########################################################################################
-############################ Fig 2A: Life History PCA Plots ######################################
+############################ Fig 3: Life History PCA Plots ######################################
 ##########################################################################################
 
 
@@ -484,55 +483,38 @@ unique(binomial)
 guild_lookup <- data.frame(fg = c('fg1','fg2','fg3','fg4','fg5','all','unclassified'), 
                            fg_name = c('Fast','Tall','Slow','Short','Medium','All','Unclassified'))
 
-
-####--------- Fig 1A PCA Plot -----------------------
 guild_fills_fg2 = c("1" = "#BFE046", "2" =  "#267038", "3" = "#27408b", "4" = "#87Cefa", "5" = "gray93")
 geom_size = 3
 geom_size = 4
 unique(fgbci$fg5)
 
-Fig_3a <- ggplot(fgbci, aes(x = PC_slow_to_fast, y = PC_breeder_to_pioneer, fill = as.factor(fg5))) +
+
+#----------------------------------------------------------------------------------
+#--------------------------  Fig 3A: Life History PCA values ----------------------
+#----------------------------------------------------------------------------------
+
+
+p <- ggplot(fgbci, aes(x = PC_slow_to_fast, y = PC_breeder_to_pioneer, fill = as.factor(fg5))) +
   geom_point(shape = 21, size = geom_size, stroke = 0.3, color = "black") + 
   labs(x = 'Survivorship–Growth Tradeoff', y = 'Stature—Recruitment Tradeoff') +
   theme_plant_small() + theme(aspect.ratio = 0.75) +
   scale_y_continuous(limits = c(-6,6), breaks = seq(-6,6,3)) +
   scale_x_continuous(limits = c(-6,7), breaks = seq(-6,6,3)) +
   scale_fill_manual(values = guild_fills_fg2) 
-Fig_3a 
+p
 
-p2 <- set_panel_size(Fig_3a , width=unit(10.25,"cm"), height=unit(8,"cm"))
-
+p2 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
 grid.newpage()
 grid.draw(p2)
 
-########################         Mean PCA ~ Stem Diameter           #######################
-# Mean PCA ~ size
 
-guild_colors <- c("#BFE046", "#267038", "#27408b", "#87Cefa", "gray")
+#----------------------------------------------------------------------------------
+#--------------------------  Fig 3B: Mean PCA vs Stem Diameter --------------------
+#----------------------------------------------------------------------------------
 
-fast_slow_fill2 <- c("#27408b", "#AABF5D" ) #  AABF5D
-
-short_tall_fill <- c("#87Cefa", "#267038")  
-short_tall_fill2 <- c("#65A8AA", "#267038")  #599B8F #74B8CC; 9FAF65
-
-short_tall_fill <- c("#27408b", "#267038")  #74B8CC; 9FAF65
-
-scale_fast_slow <- scale_fill_gradientn(colours = fast_slow_fill,
-                                        trans = 'log')
-scale_fast_slow2 <- scale_fill_gradientn(colours = fast_slow_fill)
-
-
-scale_tall_slow <- scale_fill_gradientn(colours = short_tall_fill,
-                                         trans = 'log')
-scale_tall_slow2<- scale_fill_gradientn(colours = short_tall_fill)
-
-#-----
 n_indiv = obs_totalprod %>% filter(fg == "all") %>%
   select(bin_midpoint, bin_count) %>%
   rename(n_individuals = bin_count)
-
-#-----
-#--- Fig 3B
 
 fastslowscore_bin_bydiam <- fastslowscore_bin_bydiam_byyear %>%
   left_join(fastslow_stats_bydiam_byyear %>% select(year, bin_midpoint, n_individuals)) %>%
@@ -544,7 +526,7 @@ breederscore_bin_bydiam <- breederscore_bin_bydiam_byyear %>%
 
 score_bin_bydiam <- rbind(fastslowscore_bin_bydiam, breederscore_bin_bydiam)
 
-
+# Fast vs Slow Axis
 PCA_diam_fs <- score_bin_bydiam  %>%
   filter(year == 1995, n_individuals >= 20, ID == "Fast-Slow") %>%
   ggplot(aes(x = bin_midpoint, y = mean, ymin = ci_min, ymax = ci_max)) +
@@ -553,12 +535,12 @@ PCA_diam_fs <- score_bin_bydiam  %>%
   geom_errorbar() + 
   geom_point(shape = 21, size = 4.5,  stroke = .5,  color = "black",
              aes(fill = mean)) +
-  scale_fast_slow2 +
+  scale_slow_fast2 +
   scale_y_continuous(limits = c(-1.5, 1.25),breaks = c(-1,0,1), name = 'PCA Score') +
   scale_x_log10(name = 'Stem Diameter (cm)', limits = c(.8, 100)) 
 PCA_diam_fs
 
-
+# LLP vs SLR axis
 PCA_diam_st <-  score_bin_bydiam  %>%
   filter(year == 1995, n_individuals >= 20, ID == "Short-Tall") %>%
   ggplot(aes(x = bin_midpoint, y = mean, ymin = ci_min, ymax = ci_max)) +
@@ -567,12 +549,68 @@ PCA_diam_st <-  score_bin_bydiam  %>%
   geom_errorbar() + 
   geom_point(shape = 21, size = 4.5,  stroke = .5,  color = "black",
              aes(fill = mean)) +
-  scale_tall_slow2 +
+  scale_short_tall +
   scale_x_log10(name = 'Stem Diameter (cm)', limits = c(.8,100)) +
   scale_y_continuous(limits = c(-1.5, 1.25),breaks = c(-1,0,1), name = 'PCA Score') 
 PCA_diam_st
 
-#--- Supp Fig S2------------
+
+#----------------------------------------------------------------------------------
+#--------------------------  Fig 3C: Mean PCA vs Light Intensity ------------------
+#----------------------------------------------------------------------------------
+fastslowscore_bin_bylight <- fastslowscore_bin_bylight_byyear %>%
+  left_join(fastslow_stats_bylight_byyear %>% select(year, bin_midpoint, n_individuals)) %>%
+  mutate(ID = "Fast-Slow")
+
+breederscore_bin_bylight <- breederscore_bin_bylight_byyear  %>%
+  left_join(breeder_stats_bylight_byyear %>% select(year, bin_midpoint, n_individuals)) %>%
+  mutate(ID = "Short-Tall")
+
+PCA_score_by_light <- rbind(fastslowscore_bin_bylight,breederscore_bin_bylight)
+
+error_bar_width <- .15
+
+
+# LLP vs SLR axis
+p <- PCA_score_by_light %>%
+  filter(year == 1995, n_individuals >= 20, ID == "Short-Tall") %>%
+  ggplot(aes(x = bin_midpoint, y = mean, ymin = ci_min, ymax = ci_max)) +
+  geom_abline(slope = 0, intercept = 0, linetype = "dashed")+ 
+  geom_errorbar(width = error_bar_width) + theme_plant() +
+  geom_point(shape = 21, size = 4.5,  stroke = .5,  color = "black", aes(fill = mean)) +
+  scale_short_tall +
+  scale_x_log10(limits = c(1.8,450), breaks = c(3, 30, 300),
+                name = expression(paste('Light Intensity (W m'^-2,')'))) + 
+  scale_y_continuous(limits = c(-1.5, 1.25), breaks = c(-1, 0, 1), name = 'PCA Score') 
+p
+
+p1 <- set_panel_size(p, width=unit(11,"cm"), height=unit(8,"cm"))
+grid.newpage()
+grid.draw(p1)
+
+
+# Fast vs Slow Axis
+p <- PCA_score_by_light %>%
+  filter(year == 1995, n_individuals >= 20, ID == "Fast-Slow") %>%
+  ggplot(aes(x = bin_midpoint, y = mean, ymin = ci_min, ymax = ci_max)) +
+  geom_abline(slope = 0, intercept = 0, linetype = "dashed") +
+  geom_errorbar(width = error_bar_width) + theme_plant() +
+  geom_point(shape = 21, size = 4.5,  stroke = .5,  color = "black", aes(fill = mean)) +
+  scale_slow_fast2 +
+  scale_x_log10(limits = c(1.8,450), breaks = c(3, 30, 300),
+                name = expression(paste('Light Intensity (W m'^-2,')'))) + 
+  scale_y_continuous(limits = c(-1.5, 1.25), breaks = c(-1, 0, 1), name = 'PCA Score')
+p
+
+p1 <- set_panel_size(p, width=unit(11,"cm"), height=unit(8,"cm"))
+grid.newpage()
+grid.draw(p1)
+
+
+#------------------------------------------------------------------------------------------------
+#-------- Fig S2: Mean PCA with credible interval and range across census years ------------------
+#------------------------------------------------------------------------------------------------
+
 id_mid = c("ID", "bin_midpoint")
 
 pca_range <- score_bin_bydiam  %>% filter( n_individuals >= 20) %>%
@@ -582,7 +620,7 @@ pca_range <- score_bin_bydiam  %>% filter( n_individuals >= 20) %>%
     max = max(mean)
   )
 
-# Confidence intervals 
+#--------------------------- Confidence intervals 
 (pca_score_ci = 
     ggplot() + 
     theme_plant() +
@@ -601,7 +639,7 @@ p1 <- set_panel_size(pca_score_ci, width=unit(11,"cm"), height=unit(8,"cm"))
 grid.newpage()
 grid.draw(p1)
 
-# mean range over census years
+#---------------------- mean range over census years
 (pca_score_range = 
     ggplot() + 
     theme_plant() +
@@ -623,14 +661,14 @@ grid.draw(p1)
 
 
 ######################################################################################################
-#########################        Figure 4            ############################################
+#########################        Figure 4            #################################################
 ######################################################################################################
 
-#---------------------------------------------------------------------------------------------------
-#--------------------------   Richness ~ Abundance   --------------------------------------------------------
-#---------------------------------------------------------------------------------------------------
 
-#------------- Richness vs abundance
+#------------------------------------------------------------------
+#------------------ Fig 4A: Richness ~ Abundance ------------------
+#------------------------------------------------------------------
+
 
 max_size_fg <- obs_richnessbydiameter %>%
   filter(n_individuals > 20) %>%
@@ -652,11 +690,9 @@ fitted_richnessvsabundance_filt <- fitted_richnessvsabundance %>%
 (rich_abun <- ggplot() + 
     theme_plant() +
     scale_x_log10(name = expression(paste("Abundance (cm"^-1,")")), 
-                  breaks = c(1,  100, 10000), 
-                  labels= c(1, 100, "10,000"), 
-                  limit = c(1, 80000)) + 
+                  breaks = c(1,  100, 10000), labels = c(1, 100, "10,000"), limit = c(1, 80000)) + 
     scale_y_log10(labels = signif, limit = c(0.3, 300),
-                  position = "left", name = NULL) + 
+                  position = "left", name = expression(paste("Richness (cm"^-1,")"))) + 
     scale_fill_manual(values = guild_fills_fg) +
     scale_color_manual(values = guild_colors_fg) +
     geom_jitter(data = obs_richnessbydiameter %>%   arrange(desc(fg)) %>% 
@@ -674,18 +710,20 @@ fitted_richnessvsabundance_filt <- fitted_richnessvsabundance %>%
 )
 
 
-#------------ other years---------
-Year = 2005 #adjust for other years
+#------------------------------------------------------------------------------
+#---------- Fig S5: Richness ~ Abundance in other census year ------------------
+#-------------------------------------------------------------------------------
 
-(rich_abun_2005 <- ggplot(data = binned_data %>%   arrange(desc(fg)) %>% 
-                            filter(abundance >= 0, year == Year) %>% filter(!fg %in% c('unclassified', 'all')), 
-                          aes(x = abundance_by_bin_width, y = richness_by_bin_width,
-                              fill = fg, color = fg)) + 
+Year = 2000 #adjust for other years
+
+(p <- 
+    ggplot(data = binned_data %>% arrange(desc(fg)) %>% filter(abundance >= 20, year == Year, !fg %in% c('unclassified', 'all')), 
+           aes(x = abundance_by_bin_width, y = richness_by_bin_width, fill = fg, color = fg)) + 
    theme_plant() +
    scale_x_log10(name = expression(paste("Abundance (cm"^-1,")")), 
-                 breaks = c(0.01,  1,  100, 10000), limit = c(0.01, 200000), labels = signif) + 
-   scale_y_log10(labels = signif, limit = c(0.01, 300),
-                 position = "right", name = expression(paste("Richness (cm"^-1,")"))) +
+                 breaks = c(1,  100, 10000), labels = c(1, 100, "10,000")) + 
+   scale_y_log10(labels = signif,
+                  name = expression(paste("Richness (cm"^-1,")"))) +
    scale_fill_manual(values = guild_fills_fg) +
    scale_color_manual(values = guild_colors_fg) +
    geom_point(shape = 21, size = 4, color = "black")  +
@@ -693,9 +731,10 @@ Year = 2005 #adjust for other years
    stat_smooth(size = 0.5, alpha = 0.2, method = "lm"))
 
 
-#---------------------------------------------------------------------------------------------------
-#--------------------------     Diameter Growth         -------------------------------------------
-#---------------------------------------------------------------------------------------------------
+#----------------------------------------------------
+#---------- Fig 4B Diameter Growth ------------------
+#----------------------------------------------------
+
 #used modified mass growth function
 fg_mid = c("fg", "bin_midpoint")
 diam_growth_range <- obs_indivdiamgrowth %>%
@@ -709,7 +748,6 @@ diam_growth_range
 
 fitted_diam_growth <- fitted_diamgrowthbydiameter
 
-#change to stem diameter growth
 p <- plot_diam(year_to_plot = 1995,
                fg_names = c('fg1','fg2','fg3','fg4','fg5'),
                model_fit = PROD,
@@ -720,7 +758,7 @@ p <- plot_diam(year_to_plot = 1995,
                y_labels = c(0.03, 0.1, 0.3, 1),
                error_bar_width = 0,
                dodge_width = 0.05,
-               obsdat = obs_indivdiamgrowth, #diameter growth
+               obsdat = obs_indivdiamgrowth, 
                preddat = fitted_indivdiamgrowth,
                plot_abline = FALSE,
                x_name = 'Stem Diameter (cm)',
@@ -734,8 +772,10 @@ p
 
 
 
+#-----------------------------------------------------------------------------
+#---------- Fig S4: Diameter Growth over other census years ------------------
+#----------------------------------------------------------------------------
 
-#--------------supplemental diameter growth - range ------------------
 p <- plot_diam2(year_to_plot = 1995,
                fg_names = c('fg1','fg2','fg3','fg4','fg5'),
                model_fit = PROD,
@@ -746,16 +786,77 @@ p <- plot_diam2(year_to_plot = 1995,
                y_labels = c(0.03, 0.1, 0.3, 1),
                error_bar_width = 0,
                dodge_width = 0.05,
-               obsdat = obs_indivdiamgrowth, #diameter growth
+               obsdat = obs_indivdiamgrowth, 
                preddat = fitted_indivdiamgrowth,
                plot_abline = FALSE,
                x_name = 'Stem Diameter (cm)',
                y_name = expression(paste('Diameter Growth (cm yr'^-1,')')))
 p
 
+#---------------------------------------------------------------------------------------------------
+#--------------------------   Fig 4C: Mortality   --------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+
+# Read pre-created mortality bins for plotting to compare to fitted values
+binned_data$mortality_by_bin_width <- binned_data$mortality/(binned_data$bin_max - binned_data$bin_min)
+fitted_values <- fitted_mortalitybydiameter
+
+# Filter the binned data to only have error bars for the years where we have a 1995 data point.
+binned_data2 <- binned_data %>%
+  filter(abundance > 20) %>%
+  group_by(fg, bin) %>%
+  mutate(has1995 = 1995 %in% year) %>%
+  ungroup %>%
+  filter(has1995) 
+
+
+(p<- ggplot(binned_data2 %>% filter(fg %in% paste0('fg', 1:5), abundance > 20), aes(x=bin_midpoint, y=mortality, color = fg, fill = fg)) +
+    theme_plant() + 
+    scale_color_manual(values = guild_colors_fg) +
+    scale_fill_manual(values = guild_fills_fg) +
+    scale_y_continuous(trans = "logit", 
+                       breaks = c(0.01, 0.03, 0.1,  0.3), 
+                       limits = c(0.008, 0.3),
+                       name = expression(paste("Mortality (yr"^-1,")"))) +
+    scale_x_log10(name = parse(text = 'Stem~Diameter~(cm)'), 
+                  breaks = c(1, 10, 100), 
+                  limits = c(.9, 160)) +
+    stat_summary(geom = 'errorbar', fun.max = max, fun.min = min, position = position_dodge(width= .05), width = 0) 
+    geom_ribbon(data = fitted_values, aes(x = dbh, y = q50, ymin = q025, ymax = q975),  alpha = 0.4, color = NA) +
+    geom_line(data = fitted_values, aes(x = dbh, y = q50, group = fg, color = fg)) +
+    geom_point(aes(y = mortality, fill = fg), data = binned_data %>% filter(fg %in% paste0('fg', 1:5), abundance > 20, year == 1995), 
+               position = position_dodge(width=.03), color = "black", shape = 21, size = 4) 
+)
+
+p2 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
+grid.newpage()
+grid.draw(p2)  
 
 #---------------------------------------------------------------------------------------------------
-#--------------------------   Mass Growth  --------------------------------------------------------
+#--------------------------   Fig S4: Mortality over other census years  --------------------------
+#---------------------------------------------------------------------------------------------------
+
+(p<- ggplot(binned_data2 %>% filter(fg %in% paste0('fg', 1:5), abundance > 20), aes(x=bin_midpoint, y=mortality, color = fg, fill = fg)) +
+   theme_plant() + 
+   scale_color_manual(values = guild_colors_fg) +
+   scale_fill_manual(values = guild_fills_fg) +
+   scale_y_continuous(trans = "logit", 
+                      breaks = c(0.01, 0.03, 0.1,  0.3), 
+                      limits = c(0.008, 0.3),
+                      name = expression(paste("Mortality (yr"^-1,")"))) +
+   scale_x_log10(name = parse(text = 'Stem~Diameter~(cm)'), 
+                 breaks = c(1, 10, 100), 
+                 limits = c(.9, 160)) +
+   stat_summary(geom = 'errorbar', fun.max = max, fun.min = min, position = position_dodge(width= .05), width=0) + 
+   geom_line(data = fitted_values, aes(x = dbh, y = q50, group = fg, color = fg)) 
+)
+
+p2 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
+grid.newpage()
+grid.draw(p2)  
+
+#---------------------------------------------------------------------------------------------------
+#--------------------------   Fig 4D: Mass Growth  --------------------------------------------------------
 #---------------------------------------------------------------------------------------------------
 
 mass_growth_range <- obs_indivprod %>%
@@ -791,7 +892,10 @@ p1 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
 grid.newpage()
 grid.draw(p1)
 
-#-------------------
+#---------------------------------------------------------------------------------------------------
+#--------------------------   Fig S4: Mass Growth over other census years -------------------------
+#---------------------------------------------------------------------------------------------------
+
 (p <- plot_growth2(year_to_plot = 1995,
                   fg_names = c('fg1','fg2','fg3','fg4','fg5'),
                   model_fit = PROD,
@@ -812,66 +916,6 @@ p1 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
 grid.newpage()
 grid.draw(p1)
 
-#---------------------------------------------------------------------------------------------------
-#--------------------------   Mortality   --------------------------------------------------------
-#---------------------------------------------------------------------------------------------------
-# Diagnostic plot to test mortality fit
-
-# Read pre-created mortality bins for plotting to compare to fitted values
-binned_data$mortality_by_bin_width <- binned_data$mortality/(binned_data$bin_max - binned_data$bin_min)
-fitted_values <- fitted_mortalitybydiameter
-
-# Filter the binned data to only have error bars for the years where we have a 1995 data point.
-binned_data2 <- binned_data %>%
-  filter(abundance > 20) %>%
-  group_by(fg, bin) %>%
-  mutate(has1995 = 1995 %in% year) %>%
-  ungroup %>%
-  filter(has1995) 
-
-
-(p<- ggplot(binned_data2 %>% filter(fg %in% paste0('fg', 1:5), abundance > 20), aes(x=bin_midpoint, y=mortality, color = fg, fill = fg)) +
-    theme_plant() + 
-    scale_color_manual(values = guild_colors_fg) +
-    scale_fill_manual(values = guild_fills_fg) +
-    scale_y_continuous(trans = "logit", 
-                       breaks = c(0.01, 0.03, 0.1,  0.3), 
-                       limits = c(0.008, 0.3),
-                       name = expression(paste("Mortality (yr"^-1,")"))) +
-    scale_x_log10(name = parse(text = 'Stem~Diameter~(cm)'), 
-                  breaks = c(1, 10, 100), 
-                  limits = c(.9, 160)) +
-    stat_summary(geom = 'errorbar', fun.max = max, fun.min = min, position = position_dodge(width= .05), width=0) + #0.03
-    geom_ribbon(data = fitted_values, aes(x = dbh, y = q50, ymin = q025, ymax = q975),  alpha = 0.4, color = NA) +
-    geom_line(data = fitted_values, aes(x = dbh, y = q50, group = fg, color = fg)) +
-    geom_point(aes(y = mortality, fill = fg), data = binned_data %>% filter(fg %in% paste0('fg', 1:5), abundance > 20, year == 1995), 
-               position = position_dodge(width=.03), color = "black", shape = 21, size = 4) 
-)
-
-p2 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
-grid.newpage()
-grid.draw(p2)  
-
-
-#--------just ranges ---------------
-(p<- ggplot(binned_data2 %>% filter(fg %in% paste0('fg', 1:5), abundance > 20), aes(x=bin_midpoint, y=mortality, color = fg, fill = fg)) +
-    theme_plant() + 
-    scale_color_manual(values = guild_colors_fg) +
-    scale_fill_manual(values = guild_fills_fg) +
-    scale_y_continuous(trans = "logit", 
-                       breaks = c(0.01, 0.03, 0.1,  0.3), 
-                       limits = c(0.008, 0.3),
-                       name = expression(paste("Mortality (yr"^-1,")"))) +
-    scale_x_log10(name = parse(text = 'Stem~Diameter~(cm)'), 
-                  breaks = c(1, 10, 100), 
-                  limits = c(.9, 160)) +
-    stat_summary(geom = 'errorbar', fun.max = max, fun.min = min, position = position_dodge(width= .05), width=0) + 
-    geom_line(data = fitted_values, aes(x = dbh, y = q50, group = fg, color = fg)) #+
-)
-
-p2 <- set_panel_size(p, width=unit(10.25,"cm"), height=unit(8,"cm"))
-grid.newpage()
-grid.draw(p2)  
 
 
 ##################################################################################################
@@ -880,13 +924,18 @@ grid.draw(p2)
 
 # Fig 5a      
 
-# Plot
+#---------------------------------------------------------------------------------------------------
+#--------------------------   Fig S5A: Intercepted light -------------------------
+#---------------------------------------------------------------------------------------------------
+
 grob_text <- grobTree(textGrob("Solar Equivalence", x = 0.27, y = 0.87, hjust = 0,
                                gp = gpar(col = "gold3", fontsize = 18))) 
 
 grob_a <- grobTree(textGrob("a", x = 0.06, y = 0.91, gp = gpar(col = "black", fontsize = 25, fontface = "bold")))
 totallightbins_fg <- totallightbins_fg %>%
   filter(bin_count >= 20)
+
+
 tot_light <- plot_totalprod(year_to_plot = 1995,
                             fg_names = c('fg1','fg2','fg3', 'fg4', 'fg5', 'all'),
                             model_fit_density = DENS, 
@@ -913,13 +962,14 @@ tot_light2 <- tot_light  +
   theme(aspect.ratio = 0.75) + 
   geom_abline(intercept = log10(70000), slope = 0, color = "#C9B074",
               linetype = "dashed", size = 0.75) +
-  annotation_custom(grob_text) #+ annotation_custom(grob_a)
+  annotation_custom(grob_text)
 plot(tot_light2)
 p_tot_light <- tot_light2
-# ---------------Fig 5b--------------
 
 
-
+#---------------------------------------------------------------------------------------------------
+#--------------------------   Fig S5B: Comparisons of slopes -------------------------
+#---------------------------------------------------------------------------------------------------
 xvalues <- params %>% 
   filter(variable == 'density', model == DENS) %>%
   group_by(fg) %>%
@@ -956,7 +1006,7 @@ grob3 <- grobTree(textGrob("Energy Equivalence", x = 0.24, y = 0.51, hjust = 0,
                            gp = gpar(col = "black", fontsize = 18))) 
 
 
-#---------------------Fig 5b--------------
+
 # compare slopes
 slopes <- ggplot(allslopes %>% filter(!fg %in% 'Unclassified'), 
                  aes(x = fg, y = q50, ymin = q025, ymax = q975, fill =  variable, color =variable)) +
@@ -972,9 +1022,10 @@ slopes <- ggplot(allslopes %>% filter(!fg %in% 'Unclassified'),
   scale_fill_manual(values = c('gold1', 'darkolivegreen3')) +
   scale_color_manual(values = c('gold3', 'darkgreen')) +
   theme(axis.text.x = element_text(angle = 25,  vjust = .7, face = "italic", size = 18)) +
-  annotation_custom(grob1) + annotation_custom(grob2) + annotation_custom(grob3) #+annotation_custom(grob0)
+  annotation_custom(grob1) + annotation_custom(grob2) + annotation_custom(grob3) 
 slopes
 
+#combine figures
 g_slopes <- ggplotGrob(slopes)
 g_tot_light <- ggplotGrob(p_tot_light)
 combo <- rbind(g_tot_light, g_slopes, size = "first")
@@ -983,6 +1034,33 @@ grid.newpage()
 grid.draw(combo)
 
 
+#---------------------------------------------------------------------------------------------------
+#--------------------------   Fig S6: Light Capture Scaling -------------------------
+#---------------------------------------------------------------------------------------------------
 
+hex_scale_log_colors <- scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(9, 'RdYlBu')), bias = 1)(50),
+                                             trans = 'log', name = 'Individuals', breaks = c(1, 10, 100, 1000, 10000), 
+                                             labels = c(1, 10 , 100, 1000, 10000), limits=c(1, 10000))
+
+exl <- expression(atop('Intercepted Light', paste('per Individual (W)')))
+exd <- 'Diameter (cm)'
+
+labels = trans_format("log10", math_format(10^.x))
+
+indiv_light <- ggplot() +
+  theme_plant() +
+  scale_x_log10(name = exd, limits = c(.9, 200)) +
+  scale_y_log10(name = exl, breaks = c(1,100,10000, 1000000), limits = c(1,1000000), 
+                labels = trans_format("log10", math_format(10^.x))) +
+  geom_hex(data = alltree_light_95, aes(x = dbh_corr, y = light_received)) +
+  hex_scale_log_colors +
+  geom_pointrange(data = unscaledlightbydbhcloudbin_fg %>% filter(fg %in% 'all'), 
+                  aes(x = dbh_bin, y = mean, ymin = mean, ymax = mean), size = .5) +
+  theme(legend.position = "right", legend.text = element_text(size = 15), legend.title = element_text(size = 16))+
+  hex_scale_log_colors +
+  geom_smooth(data = alltree_light_95, aes(x = dbh_corr, y = light_received),
+              method = "lm", color = "black", size = .7) +
+  guides(fill = guide_legend(override.aes = list(alpha = alpha_value)))
+indiv_light 
 
 
