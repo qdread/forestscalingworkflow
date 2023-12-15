@@ -1053,7 +1053,6 @@ indiv_light <- ggplot() +
   scale_y_log10(name = exl, breaks = c(1,100,10000, 1000000), limits = c(1,1000000), 
                 labels = trans_format("log10", math_format(10^.x))) +
   geom_hex(data = alltree_light_95, aes(x = dbh_corr, y = light_received)) +
-  hex_scale_log_colors +
   geom_pointrange(data = unscaledlightbydbhcloudbin_fg %>% filter(fg %in% 'all'), 
                   aes(x = dbh_bin, y = mean, ymin = mean, ymax = mean), size = .5) +
   theme(legend.position = "right", legend.text = element_text(size = 15), legend.title = element_text(size = 16))+
