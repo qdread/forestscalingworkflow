@@ -89,7 +89,9 @@ params <- read.csv('data/data_piecewisefits/piecewise_paramci_by_fg.csv', string
 growth_slopes <- read.csv('data/data_piecewisefits/piecewise_fitted_slopes_by_fg.csv', stringsAsFactors = FALSE)
 light_slopes <- read.csv('data/data_piecewisefits/light_piecewise_fitted_slopes_by_fg.csv', stringsAsFactors = FALSE)
 totallightbins_fg <- read.csv(file.path(fp, 'obs_totallight.csv'), stringsAsFactors = FALSE)
+unscaledlightbydbhcloudbin_fg <- read.csv(file.path(fp, 'unscaledlightbydbhcloudbin_fg.csv'), stringsAsFactors = FALSE)
 
+load('data/rawdataobj_alternativecluster.r')
 
 # source the extra extraction functions that aren't in the package
 source('R_functions/model_output_extraction_functions.r')
@@ -1059,7 +1061,7 @@ indiv_light <- ggplot() +
   hex_scale_log_colors +
   geom_smooth(data = alltree_light_95, aes(x = dbh_corr, y = light_received),
               method = "lm", color = "black", size = .7) +
-  guides(fill = guide_legend(override.aes = list(alpha = alpha_value)))
+  guides(fill = guide_legend(override.aes = list(alpha = 1)))
 indiv_light 
 
 
