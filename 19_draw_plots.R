@@ -821,7 +821,7 @@ binned_data2 <- binned_data %>%
     scale_x_log10(name = parse(text = 'Stem~Diameter~(cm)'), 
                   breaks = c(1, 10, 100), 
                   limits = c(.9, 160)) +
-    stat_summary(geom = 'errorbar', fun.max = max, fun.min = min, position = position_dodge(width= .05), width = 0) 
+    stat_summary(geom = 'errorbar', fun.max = max, fun.min = min, position = position_dodge(width= .05), width = 0) +
     geom_ribbon(data = fitted_values, aes(x = dbh, y = q50, ymin = q025, ymax = q975),  alpha = 0.4, color = NA) +
     geom_line(data = fitted_values, aes(x = dbh, y = q50, group = fg, color = fg)) +
     geom_point(aes(y = mortality, fill = fg), data = binned_data %>% filter(fg %in% paste0('fg', 1:5), abundance > 20, year == 1995), 
