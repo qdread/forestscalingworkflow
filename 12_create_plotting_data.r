@@ -8,16 +8,16 @@
 library(tidyverse)
 library(forestscaling)
 
-fp_out <- 'ForestLight/data/data_forplotting'
+fp_out <- 'data/data_forplotting'
 
 years <- seq(1990, 2010, 5)
 fg_names <- c("fg1", "fg2", "fg3", "fg4", "fg5", "unclassified")
 
 # Load all the by-year binned data.
-load('ForestLight/data/data_binned/bin_object_singleyear.RData')
+load('data/data_binned/bin_object_singleyear.RData')
 
 # Load raw data
-load('ForestLight/data/rawdataobj_withimputedproduction.RData')
+load('data/rawdataobj_withimputedproduction.RData')
 
 binedgedata <- densitybin_byyear %>% filter(fg == 'all', year == 1995) 
 area_core <- 42.84
@@ -102,7 +102,44 @@ write.csv(totallightbins_fg, file.path(fp_out, 'obs_totallight.csv'), row.names 
 write.csv(indivlightcapturedbins_fg, file.path(fp_out, 'obs_indivlightcaptured.csv'), row.names = FALSE)
 write.csv(totallightcapturedbins_fg, file.path(fp_out, 'obs_totallightcaptured.csv'), row.names = FALSE)
 write.csv(totalvolbins_fg, file.path(fp_out, 'obs_totalvol.csv'), row.names = FALSE)
-write.csv(totalleafareabins_fg, file.path(fp_out, 'obs_totalleafarea.csv'), row.names = FALSE)																									 
+write.csv(totalleafareabins_fg, file.path(fp_out, 'obs_totalleafarea.csv'), row.names = FALSE)		
+
+# Range bin for individual light
+
+light_bin_stats <- function(indivs) {
+  qs <- quantile(indivs, c(0.025, 0.25, 0.5, 0.75, 0.975)) %>%
+    setNames(c('q025','q25','q50','q75','q975'))
+  ci_width <- qnorm(0.975) * sd(log(indivs))/sqrt(length(indivs))
+  data.frame(t(qs), 
+             mean = exp(mean(log(indivs))),
+             sd = exp(sd(log(indivs))),
+             ci_min = exp(mean(log(indivs)) - ci_width),
+             ci_max = exp(mean(log(indivs)) + ci_width))
+}
+
+alltree_light_95 <- alltree_light_95 %>%
+  mutate(fg = if_else(!is.na(fg), paste0('fg',fg), as.character(NA)))
+numbins <- 20
+  
+dbhbin1995 <- with(alltree_light_95, logbin(x = dbh_corr, n = numbins))
+
+unscaledlightbydbhcloudbin_fg <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(fg, dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_received))
+
+unscaledlightbydbhcloudbin_all <- alltree_light_95 %>%
+  mutate(dbh_bin = cut(dbh_corr, breaks = c(dbhbin1995$bin_min, dbhbin1995$bin_max[numbins] + 1), labels = dbhbin1995$bin_midpoint, include.lowest = TRUE)) %>%
+  group_by(dbh_bin) %>%
+  group_modify(~ light_bin_stats(.$light_received))
+
+unscaledlightbydbhcloudbin_fg <- data.frame(fg = 'all', unscaledlightbydbhcloudbin_all, stringsAsFactors = FALSE) %>%
+  rbind(as.data.frame(unscaledlightbydbhcloudbin_fg)) %>%
+  mutate(dbh_bin = as.numeric(as.character(dbh_bin)))
+  
+write.csv(unscaledlightbydbhcloudbin_fg, file.path(fp_out, 'unscaledlightbydbhcloudbin_fg.csv'), row.names = FALSE)
+
+																							 
 # Observed individual production
 obs_indivprod_df <- map(alltreedat[-1],
                          function(x) with(x %>% filter(!recruit), cloudbin_across_years(dat_values = production, dat_classes = dbh_corr, edges = binedgedata, n_census = 1)))
