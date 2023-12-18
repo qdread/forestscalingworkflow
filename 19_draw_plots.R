@@ -91,8 +91,6 @@ light_slopes <- read.csv('data/data_piecewisefits/light_piecewise_fitted_slopes_
 totallightbins_fg <- read.csv(file.path(fp, 'obs_totallight.csv'), stringsAsFactors = FALSE)
 unscaledlightbydbhcloudbin_fg <- read.csv(file.path(fp, 'unscaledlightbydbhcloudbin_fg.csv'), stringsAsFactors = FALSE)
 
-load('data/rawdataobj_alternativecluster.r')
-
 # source the extra extraction functions that aren't in the package
 source('R_functions/model_output_extraction_functions.r')
 source('R_functions/extra_plot_functions.R') # add new plotting themes
@@ -924,10 +922,9 @@ grid.draw(p1)
 ########################################   Figure 5 ##############################################
 ##################################################################################################
 
-# Fig 5a      
 
 #---------------------------------------------------------------------------------------------------
-#--------------------------   Fig S5A: Intercepted light -------------------------
+#--------------------------   Fig 5A: Intercepted light -------------------------
 #---------------------------------------------------------------------------------------------------
 
 grob_text <- grobTree(textGrob("Solar Equivalence", x = 0.27, y = 0.87, hjust = 0,
@@ -970,7 +967,7 @@ p_tot_light <- tot_light2
 
 
 #---------------------------------------------------------------------------------------------------
-#--------------------------   Fig S5B: Comparisons of slopes -------------------------
+#--------------------------   Fig 5B: Comparisons of slopes -------------------------
 #---------------------------------------------------------------------------------------------------
 xvalues <- params %>% 
   filter(variable == 'density', model == DENS) %>%
