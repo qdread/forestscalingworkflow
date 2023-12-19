@@ -82,6 +82,7 @@ for (i in dir(fp, pattern = 'pred_|fitted_')) {
 load('data/data_piecewisefits/fits_bylight_forratio.RData')
 load('data/data_binned/bin_object_singleyear.RData')
 load('data/data_forplotting/light_scaling_plotting_data.RData')
+load('data/rawdataobj1995.RData')
 binned_data <- read_csv("data/data_binned/additional_bins_fg_year.csv")
 ratios <- read_csv('data/data_binned/additional_bins_ratio_year.csv')
 fgbci <- read.table('data/fgroups_dynamics_new.txt', stringsAsFactors = FALSE)
