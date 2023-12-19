@@ -4,7 +4,7 @@
 ### WHICH MODEL FITS TO USE IN PLOTS ####
 ########### ============== ##############
 
-# change these if needed.
+# segments in piecewise regression. change these if needed.
 DENS = 3
 PROD = 1
 
@@ -670,7 +670,6 @@ grid.draw(p1)
 #------------------ Fig 4A: Richness ~ Abundance ------------------
 #------------------------------------------------------------------
 
-
 max_size_fg <- obs_richnessbydiameter %>%
   filter(n_individuals > 20) %>%
   group_by(fg) %>%
@@ -1049,8 +1048,8 @@ labels = trans_format("log10", math_format(10^.x))
 
 indiv_light <- ggplot() +
   theme_plant() +
-  scale_x_log10(name = exd, limits = c(.9, 200)) +
-  scale_y_log10(name = exl, breaks = c(1,100,10000, 1000000), limits = c(1,1000000), 
+  scale_x_log10(name = exd, limits = c(.9, 250)) +
+  scale_y_log10(name = exl, breaks = c(1,100,10000, 1000000), limits = c(.8, 1500000), 
                 labels = trans_format("log10", math_format(10^.x))) +
   geom_hex(data = alltree_light_95, aes(x = dbh_corr, y = light_received)) +
   geom_pointrange(data = unscaledlightbydbhcloudbin_fg %>% filter(fg %in% 'all'), 
