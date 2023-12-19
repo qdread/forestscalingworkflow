@@ -748,6 +748,7 @@ diam_growth_range
 
 fitted_diam_growth <- fitted_diamgrowthbydiameter
 
+# Warning issued when generating this plot is caused by truncation of fitted trendline
 p <- plot_diam(year_to_plot = 1995,
                fg_names = c('fg1','fg2','fg3','fg4','fg5'),
                model_fit = PROD,
