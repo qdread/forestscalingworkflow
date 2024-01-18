@@ -4,9 +4,7 @@
 
 This is a repository containing all data and code necessary to reproduce the analyses in:
 
- John M. Grady, Quentin D. Read, Sydne Record, Nadja Rüger, Phoebe L. Zarnetske, Anthony I. Dell, Stephen P. Hubbell, Sean T. Michaletz, Brian J. Enquist. 2023. Life history scaling in a tropical forest. *Journal of Ecology*.
-
-(This citation will be updated upon final acceptance of the manuscript.)
+ John M. Grady, Quentin D. Read, Sydne Record, Nadja Rüger, Phoebe L. Zarnetske, Anthony I. Dell, Stephen P. Hubbell, Sean T. Michaletz, Brian J. Enquist. 2024. Life history scaling in a tropical forest. *Journal of Ecology*. DOI: [10.1111/1365-2745.14245](https://doi.org/10.1111/1365-2745.14245)
 
 ## Contents
 
@@ -29,4 +27,4 @@ install.packages('R_functions/forestscaling_0.1.tar.gz', repos = NULL, type = 's
 - Next, fit the Stan models using the Bash shell commands in the file `cmdstan_calls.sh` (these were run on a compute cluster with Slurm software).
 - Finally, run scripts `07` through `19` to process, analyze, and visualize model output.
 
-*This README last updated by QDR on 08 December 2023*
+*This README last updated by QDR on 18 January 2024*
